@@ -1029,7 +1029,7 @@ END_EVENT_TABLE()
 
 class wxUnrealTournament : public wxApp
 {
-	DECLARE_CLASS(wxUnrealTournament);
+	wxDECLARE_CLASS(wxUnrealTournament);
 
 private:
 	WConfigPageRenderer* Page;
@@ -1297,6 +1297,7 @@ void wxUnrealTournament::Tick(wxIdleEvent& Event)
 	else
 	{
 		Disconnect(wxEVT_IDLE, wxIdleEventHandler(wxUnrealTournament::Tick));
+		wxTheApp->OnExit();
 		wxTheApp->Exit();
 	}
 }
@@ -1308,9 +1309,9 @@ int wxUnrealTournament::OnExit()
 	return wxApp::OnExit();
 }
 
-IMPLEMENT_CLASS(wxUnrealTournament, wxApp);
-IMPLEMENT_APP_NO_MAIN(wxUnrealTournament);
-IMPLEMENT_WX_THEME_SUPPORT;
+wxIMPLEMENT_CLASS(wxUnrealTournament, wxApp);
+wxIMPLEMENT_APP_NO_MAIN(wxUnrealTournament);
+wxIMPLEMENT_WX_THEME_SUPPORT;
 
 //
 // Entry point.
@@ -1340,6 +1341,7 @@ int main( int argc, char* argv[] )
 	wxEntryStart(argc, argv);
 	wxTheApp->CallOnInit();
 	wxTheApp->OnRun();
+	wxEntryCleanup();
 
     return(0);
 }
