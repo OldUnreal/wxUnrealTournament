@@ -137,6 +137,8 @@ FFileManagerLinux FileManager;
 #endif // WX_FIRST
 #include "WindowRes.h"
 
+#include "WxStuff.h"
+
 // Used to check if the game is already running
 sem_t* RunningSemaphore = NULL;
 
@@ -305,6 +307,9 @@ static UEngine* InitEngine()
 
 	// Set exec hook.
 	GExec = NULL;
+	static FExecHook GLocalHook;
+	GLocalHook.Engine = NULL;
+	GExec = &GLocalHook;
 
 	// Update first-run.
 	INT FirstRun=0;
@@ -325,6 +330,13 @@ static UEngine* InitEngine()
 	Engine->Init();
 
 	debugf( TEXT("Startup time: %f seconds."), appSecondsNew()-LoadTime );
+
+	GLocalHook.Engine = Engine;
+
+	if (!GCurrentViewport && Engine->Client && Engine->Client->Viewports.Num())
+    {
+        GCurrentViewport = Engine->Client->Viewports(0);
+    }
 
 	return Engine;
 	unguard;
@@ -1325,6 +1337,7 @@ void wxUnrealTournament::Tick(wxIdleEvent& Event)
 int wxUnrealTournament::OnExit()
 {
 	delete Args;
+	GExec = NULL;
 	CleanUpOnExit(0);
 	return wxApp::OnExit();
 }
