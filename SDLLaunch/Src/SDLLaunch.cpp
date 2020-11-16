@@ -200,7 +200,7 @@ static inline void FixIni()
 		TEXT("GameRenderDevice"),
 		TEXT("WindowRenderDevice")
 	};
-	
+
 	const TCHAR* LegacyOrWindowsVideoRenderers[] =
 	{
         TEXT("D3DDrv.D3DRenderDevice"),
@@ -219,7 +219,7 @@ static inline void FixIni()
 		TEXT("Audio.GenericAudioSubsystem"),
 		TEXT("Galaxy.GalaxyAudioSubsystem"),
 	};
-	
+
     // A default config? Force it from WinDrv to SDLDrv... --ryan.
     //  Also clean up legacy Loki interfaces...
 	if( !ParseParam(appCmdLine(),TEXT("NoForceSDLDrv")) )
@@ -297,9 +297,9 @@ static UEngine* InitEngine()
 	// Create the global engine object.
 	UClass* EngineClass;
 	EngineClass = UObject::StaticLoadClass(
-		UGameEngine::StaticClass(), NULL, 
-		TEXT("ini:Engine.Engine.GameEngine"), 
-		NULL, LOAD_NoFail, NULL 
+		UGameEngine::StaticClass(), NULL,
+		TEXT("ini:Engine.Engine.GameEngine"),
+		NULL, LOAD_NoFail, NULL
 	);
 	UEngine* Engine = ConstructObject<UEngine>( EngineClass );
 	Engine->Init();
@@ -316,7 +316,7 @@ static UEngine* InitEngine()
 
 //
 // Exit wound.
-// 
+//
 int CleanUpOnExit(int ErrorLevel)
 {
 	if (RunningSemaphore)
@@ -324,7 +324,7 @@ int CleanUpOnExit(int ErrorLevel)
 		sem_close(RunningSemaphore);
 		sem_unlink("UnrealTournamentRunningSemaphore");
 	}
-	
+
 	// Clean up our mess.
 	GIsRunning = 0;
 	/*
@@ -382,7 +382,7 @@ static bool MainLoopIteration(MainLoopArgs *args)
 		return false;
 	}
 
-    try 
+    try
 	{
 		DOUBLE &OldTime = args->OldTime;
 		DOUBLE &SecondStartTime = args->SecondStartTime;
@@ -444,7 +444,7 @@ static void MainLoop( UEngine* Engine )
 
 //
 // Simple copy.
-// 
+//
 
 void SimpleCopy(TCHAR* fromfile, TCHAR* tofile)
 {
@@ -466,7 +466,7 @@ void SimpleCopy(TCHAR* fromfile, TCHAR* tofile)
 	fclose(to);
 }
 
-#define WINDOW_API 
+#define WINDOW_API
 
 //
 // Interface for accepting commands.
@@ -516,10 +516,10 @@ class WRadioButton : public wxRadioButton
 {
 	DECLARE_CLASS(WRadioButton)
 	DECLARE_EVENT_TABLE()
-	
+
 private:
 	FDelegate OnClickDelegate;
-	
+
 public:
 	WRadioButton(wxWindow* Parent, wxWindowID Id, FString Text, FDelegate InClicked=FDelegate(), UBOOL FirstOfGroup=FALSE)
 		: wxRadioButton(Parent, Id, *Text, wxDefaultPosition, wxDefaultSize, FirstOfGroup ? wxRB_GROUP : 0)
@@ -602,7 +602,7 @@ class WListBox : public wxListBox
 
 private:
 	FDelegate OnClickDelegate;
-	
+
 public:
 	WListBox(wxWindow* Parent, wxWindowID Id, long Style, FDelegate InClicked=FDelegate())
 	: wxListBox(Parent, Id, wxDefaultPosition, wxDefaultSize, 0, nullptr, Style)
@@ -682,7 +682,7 @@ class WConfigPageFirstTime : public WConfigPage
 
 public:
 	WTextLabel* FirstTimePrompt;
-	
+
 	WConfigPageFirstTime(WConfigWizard* InOwner, wxWizardPage* InPrev)
 		: WConfigPage(InOwner, InPrev)
 	{
@@ -702,14 +702,14 @@ class WConfigPageDetail : public WConfigPage
 public:
 	WTextLabel* DetailPrompt, *DetailNote;
 	WEdit* DetailEdit;
-	
+
 	WConfigPageDetail(WConfigWizard* InOwner, wxWizardPage* InPrev)
 		: WConfigPage(InOwner, InPrev)
 	{
 		DetailPrompt = new WTextLabel(this, IDC_DetailPrompt, Localize(TEXT("IDDIALOG_ConfigPageDetail"), TEXT("IDC_DetailPrompt"), TEXT("Startup")));
 		DetailPrompt->Wrap(640);
 		VertSizer->Add(DetailPrompt, 0, wxALL, 10);
-		
+
 		DetailEdit = new WEdit(this, IDC_DetailEdit);
 		VertSizer->Add(DetailEdit, 1, wxEXPAND | wxALL, 10);
 
@@ -738,7 +738,7 @@ public:
 			{
 				Info = Info + LocalizeGeneral(TEXT("SkinsHigh"),TEXT("Startup")) + TEXT("\r\n");
 			}
-			
+
 			// World.
 			if( (DescFlags&RDDESCF_LowDetailWorld) )
 			{
@@ -749,7 +749,7 @@ public:
 			{
 				Info = Info + LocalizeGeneral(TEXT("WorldHigh"),TEXT("Startup")) + TEXT("\r\n");
 			}
-			
+
 			// Resolution.
 			if( (DescFlags&RDDESCF_LowDetailWorld) )
 			{
@@ -816,7 +816,7 @@ public:
 			SoundList->SetStringSelection(*Default);
 		CurrentChange();
 	}
-	
+
 	void CurrentChange()
 	{
 		SoundNote->SetLabel(Localize(TEXT("Descriptions"),*CurrentDriver(),TEXT("Startup"),NULL,1));
@@ -871,11 +871,11 @@ public:
 		// Note
 		SoundNote = new WTextLabel(this, IDC_SoundNote, Localize(TEXT("Descriptions"),*CurrentDriver(),TEXT("Startup"),NULL,1));
 		VertSizer->Add(SoundNote, 2, wxEXPAND | wxALL, 10);
-		
+
 		NextPage = new WConfigPageDetail(Owner, this);
 
 		RefreshList();
-	}	
+	}
 };
 IMPLEMENT_CLASS(WConfigPageSound, wxWizardPage);
 
@@ -924,7 +924,7 @@ public:
 			RenderList->SetStringSelection(*Default);
 		CurrentChange();
 	}
-	
+
 	void CurrentChange()
 	{
 		RenderNote->SetLabel(Localize(TEXT("Descriptions"),*CurrentDriver(),TEXT("Startup"),NULL,1));
@@ -987,7 +987,7 @@ public:
 			NextPage = new WConfigPageDetail(Owner, this);
 
 		RefreshList();
-	}	
+	}
 };
 IMPLEMENT_CLASS(WConfigPageRenderer, wxWizardPage);
 
@@ -1093,9 +1093,9 @@ int wxUnrealTournament::OnRun()
 #endif
 
 	UEngine* Engine = NULL;
-	guard(main); 
-	try 
-	{ 
+	guard(main);
+	try
+	{
 		GIsStarted		= 1;
 
 		// Set module name.
@@ -1103,7 +1103,7 @@ int wxUnrealTournament::OnRun()
 		appStrncpy( GModule, TEXT("UnrealTournament"), ARRAY_COUNT(GModule));
 
 		// Set the package name.
-		appStrncpy( const_cast<TCHAR*>(GPackage), appPackage(), 64);	
+		appStrncpy( const_cast<TCHAR*>(GPackage), appPackage(), 64);
 
 		// Get the command line.
 		FString CmdLine;
@@ -1111,11 +1111,11 @@ int wxUnrealTournament::OnRun()
 		{
 			if( i>1 )
 				CmdLine += TEXT(" ");
-			CmdLine += ANSI_TO_TCHAR(argv[i]); 
+			CmdLine += ANSI_TO_TCHAR(argv[i]);
 		}
 
 		// Init core.
-		GIsClient		= 1; 
+		GIsClient		= 1;
 		GIsGuarded		= 1;
 		appInit( TEXT("UnrealTournament"), *CmdLine, &Malloc, &Log, &Error, &Warn, &FileManager, FConfigCacheIni::Factory, 1 );
 
@@ -1186,12 +1186,12 @@ int wxUnrealTournament::OnRun()
 			{
 //				Page = new WConfigPageSafeMode(&D, nullptr);
 //				D.Title=LocalizeGeneral(TEXT("SafeMode"),TEXT("Startup"));
-			}			
+			}
 			else if( FirstRun<ENGINE_VERSION || ParseParam(appCmdLine(),TEXT("firsttime")) )
 			{
 				Page = new WConfigPageRenderer(&D, nullptr);
 				D.Title=LocalizeGeneral(TEXT("FirstTime"),TEXT("Startup"));
-			}			
+			}
 			else if( ParseParam(appCmdLine(),TEXT("changevideo")) )
 			{
 				Page = new WConfigPageRenderer(&D, nullptr);
@@ -1224,7 +1224,7 @@ int wxUnrealTournament::OnRun()
 		// Init splash screen.
 		if ( GFileManager->FileSize(*Filename) > 0)
 			InitSplash(*Filename );
-	
+
 		// Init console log.
 		if (ParseParam(*CmdLine, TEXT("LOG")))
 		{
@@ -1320,7 +1320,7 @@ int main( int argc, char* argv[] )
 {
 	Malloc.Init();
 	GMalloc = &Malloc;
-	
+
 	appChdirSystem();
 
 	//
@@ -1333,7 +1333,7 @@ int main( int argc, char* argv[] )
 		appErrorf(TEXT("Couldn't initialize SDL: %s\n"), err);
 		appExit();
 	}
-	
+
 	atexit(sdl_atexit_handler);
 
 	// Start wxWindow
