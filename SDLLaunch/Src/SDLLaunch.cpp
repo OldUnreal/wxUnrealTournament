@@ -7,6 +7,29 @@ Revision history:
 
 =============================================================================*/
 
+//#define WX_FIRST
+
+#ifdef WX_FIRST
+#include "wx.h"
+
+#ifdef __INTEL__
+#undef __INTEL__
+#endif
+
+#ifdef DECLARE_CLASS
+#undef DECLARE_CLASS
+#endif
+
+#ifdef DECLARE_ABSTRACT_CLASS
+#undef DECLARE_ABSTRACT_CLASS
+#endif
+
+#ifdef IMPLEMENT_CLASS
+#undef IMPLEMENT_CLASS
+#endif
+
+#endif // WX_FIRST
+
 // System includes
 #include "SDLLaunchPrivate.h"
 
@@ -109,12 +132,9 @@ FFileManagerLinux FileManager;
 
 #include <semaphore.h>
 
-//#include <wx/wxprec.h>
-#include <wx/wx.h>
-#include <wx/dcbuffer.h>
-#include <wx/image.h>
-#include <wx/stattext.h>
-#include <wx/wizard.h>
+#ifndef WX_FIRST
+#include "wx.h"
+#endif // WX_FIRST
 #include "WindowRes.h"
 
 // Used to check if the game is already running
