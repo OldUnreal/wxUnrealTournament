@@ -405,37 +405,6 @@ public:
     }
 };
 
-static void PrefItemRenderer_OnEditingStarted( wxDataViewEvent &event )
-{
-	wxDataViewColumn* column = event.GetDataViewColumn();
-	if (!column) return;
-	wxDataViewRenderer* rend = column->GetRenderer();
-	if (!rend) return;
-	wxWindow* ed = rend->GetEditorCtrl();
-	if (!ed) return;
-	wxChoice* choice = wxDynamicCast(ed, wxChoice);
-	if (!choice) return;
-    wxUIActionSimulator sim;
-    sim.Char(' '); // try open it by send space
-}
-
-static void PrefItemRenderer_OnChoice( wxCommandEvent &event )
-{
-	wxObject* obj = event.GetEventObject();
-	if (!obj) return;
-	wxChoice* choice = wxDynamicCast(obj, wxChoice);
-	if (!choice) return;
-	wxWindow* parent = choice->GetParent();
-	if (!parent) return;
-	wxDataViewCtrl* ctrl = wxDynamicCast(parent, wxDataViewCtrl);
-	if (!ctrl) return;
-	wxDataViewColumn* column = ctrl->GetColumn(1);
-	if (!column) return;
-	wxDataViewRenderer* rend = column->GetRenderer();
-	if (!rend) return;
-	rend->FinishEditing();
-}
-
 class PrefItemRenderer: public wxDataViewCustomRenderer
 {
 public:
@@ -472,19 +441,50 @@ public:
 		wxChoice* c = new wxChoice(parent->GetParent(), wxID_ANY,
 				labelRect.GetPosition(),
 				labelRect.GetSize(),
-				EditItem->Choices); // XXX
+				EditItem->Choices);
 		c->Reparent(parent);
 		c->Move(labelRect.GetRight() - c->GetRect().width, wxDefaultCoord);
 		c->SetStringSelection( EditItem->Value );
-		c->Bind(wxEVT_CHOICE, &PrefItemRenderer_OnChoice, wxID_ANY);
+		c->Bind(wxEVT_CHOICE, &PrefItemRenderer::OnChoice, this, wxID_ANY);
 
 		if (!Binded)
 		{
 			Binded = true;
-			parent->Bind(wxEVT_DATAVIEW_ITEM_EDITING_STARTED, &PrefItemRenderer_OnEditingStarted, wxID_ANY);
+			parent->Bind(wxEVT_DATAVIEW_ITEM_EDITING_STARTED, &PrefItemRenderer::OnEditingStarted, this, wxID_ANY);
 		}
 
 		return c;
+    }
+
+    void OnEditingStarted( wxDataViewEvent &event )
+    {
+    	wxDataViewColumn* column = event.GetDataViewColumn();
+    	if (!column) return;
+    	wxDataViewRenderer* rend = column->GetRenderer();
+    	if (!rend) return;
+    	wxWindow* ed = rend->GetEditorCtrl();
+    	if (!ed) return;
+    	wxChoice* choice = wxDynamicCast(ed, wxChoice);
+    	if (!choice) return;
+        wxUIActionSimulator sim;
+        sim.Char(' '); // try open it by send space
+    }
+
+    void OnChoice( wxCommandEvent &event )
+    {
+    	wxObject* obj = event.GetEventObject();
+    	if (!obj) return;
+    	wxChoice* choice = wxDynamicCast(obj, wxChoice);
+    	if (!choice) return;
+    	wxWindow* parent = choice->GetParent();
+    	if (!parent) return;
+    	wxDataViewCtrl* ctrl = wxDynamicCast(parent, wxDataViewCtrl);
+    	if (!ctrl) return;
+    	wxDataViewColumn* column = ctrl->GetColumn(1);
+    	if (!column) return;
+    	wxDataViewRenderer* rend = column->GetRenderer();
+    	if (!rend) return;
+    	rend->FinishEditing();
     }
 
     virtual bool GetValueFromEditorCtrl( wxWindow* editor, wxVariant &value )
@@ -639,7 +639,7 @@ public:
 	{
 		Connect(GetId(), wxEVT_CLOSE_WINDOW, wxCommandEventHandler(wxFramePreferences::OnClose));
 
-		dataView = new wxDataViewCtrl(this, wxID_ANY, wxDefaultPosition, wxSize(300, 300), wxDV_VARIABLE_LINE_HEIGHT);
+		dataView = new wxDataViewCtrl(this, wxID_ANY, wxDefaultPosition, wxSize(300, 300), wxDV_VARIABLE_LINE_HEIGHT | wxDV_VERT_RULES);
 
         wxDataViewTextRenderer* rend0 = new wxDataViewTextRenderer("string", wxDATAVIEW_CELL_ACTIVATABLE);
         wxDataViewColumn* column0 = new wxDataViewColumn("", rend0, 0, GetSize().GetWidth()/2,
@@ -655,6 +655,21 @@ public:
         dataView->AssociateModel(prefModel);
 
         column0->SetSortOrder(true);
+
+        dataView->Bind(wxEVT_DATAVIEW_ITEM_ACTIVATED, &wxFramePreferences::OnActivated, this, wxID_ANY);
+	}
+
+	void OnActivated( wxDataViewEvent &event )
+	{
+		if (event.GetColumn() != 0) return;
+		wxDataViewColumn* column = event.GetDataViewColumn();
+		if (!column) return;
+		wxDataViewCtrl* ctrl = column->GetOwner();
+		if (!ctrl) return;
+		if (ctrl->IsExpanded(event.GetItem()))
+			ctrl->Collapse(event.GetItem());
+		else
+			ctrl->Expand(event.GetItem());
 	}
 
 	void OnClose(wxCommandEvent& event)
