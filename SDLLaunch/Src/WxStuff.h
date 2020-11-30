@@ -1,6 +1,11 @@
 #include <wx/wx.h>
 #include <wx/dataview.h>
 #include "WxNaturalSort.h"
+#include "Core.h"
+#include "Engine.h"
+#include "FConfigCacheIni.h"
+
+#define __HERE__  GLog->Logf(TEXT("Here: %d"), __LINE__);
 
 class TreeItem {
 public:
@@ -8,7 +13,7 @@ public:
     TArray<TreeItem> Children;
     BOOL Loaded;
 
-    FPreferencesInfo Prefs;
+    FPreferencesInfo Prefs{};
 
     UProperty*      Property;
 	INT				Offset;
@@ -188,7 +193,7 @@ public:
 
     void Load()
     {
-        guard(TreeItem::Loaded);
+        guard(TreeItem::Load);
 
         if (Loaded) return;
         Loaded = true;
@@ -323,9 +328,189 @@ public:
 		return (FArray*)AdrV;
 		unguard;
 	}
+
+    void GetStates( TArray<FName>& States )
+	{
+		guard(TreeItem::GetStates);
+		if( Class )
+			for( TFieldIterator<UState> StateIt(Class); StateIt; ++StateIt )
+				if( StateIt->StateFlags & STATE_Editable )
+					States.AddUniqueItem( StateIt->GetFName() );
+		unguard;
+	}
 };
 
-class PrefModel: public wxDataViewModel {
+#define TYPE_TEXT 0
+#define TYPE_LIST 1
+
+class ItemValue
+{
+public:
+    TreeItem* Data;
+    wxArrayString Choices;
+    wxString Value;
+    INT Type;
+
+    ItemValue(TreeItem* InData): Data(InData), Choices(), Type()
+    {
+        if (Data->Property)
+        {
+            UProperty* Property = Data->Property;
+            if( Property->IsA(UBoolProperty::StaticClass()) )
+            {
+                AddChoice( GFalse );
+                AddChoice( GTrue );
+            }
+            else if( Property->IsA(UByteProperty::StaticClass()) && Cast<UByteProperty>(Property)->Enum)
+            {
+                for( INT i=0; i<Cast<UByteProperty>(Property)->Enum->Names.Num(); i++ )
+                    AddChoice( *Cast<UByteProperty>(Property)->Enum->Names(i) );
+            }
+            else if( Property->IsA(UNameProperty::StaticClass()) && Data->Prefs.Caption==NAME_InitialState )
+            {
+                TArray<FName> States;
+                Data->GetStates( States );
+                AddChoice( *FName(NAME_None) );
+                for( INT i=0; i<States.Num(); i++ )
+                    AddChoice( *States(i) );
+            }
+            else if( Cast<UClassProperty>(Property) && appStricmp(*Property->Category,TEXT("Drivers"))==0 )
+            {
+                UClassProperty* ClassProp = CastChecked<UClassProperty>(Property);
+                TArray<FRegistryObjectInfo> Classes;
+                UObject::GetRegistryObjects( Classes, UClass::StaticClass(), ClassProp->MetaClass, 0 );
+                for( INT i=0; i<Classes.Num(); i++ )
+                {
+                    FString Path=Classes(i).Object, Left, Right;
+                    if( Path.Split(TEXT("."),&Left,&Right) )
+                        AddChoice( Localize(*Right,TEXT("ClassCaption"),*Left) );
+                    else
+                        AddChoice( Localize("Language","Language",TEXT("Core"),*Path) );
+                }
+            }
+        }
+        if (Choices.Count() > 0) Type = TYPE_LIST;
+        CacheValue();
+    }
+
+    void AddChoice(wxString Str)
+    {
+        Choices.Add(Str);
+    }
+
+    void CacheValue()
+    {
+        Value = *Data->GetValue();
+    }
+};
+
+class PrefItemRenderer: public wxDataViewCustomRenderer
+{
+public:
+    ItemValue* Item;
+    ItemValue* EditItem;
+    PrefItemRenderer() :
+        wxDataViewCustomRenderer(wxT("void*"), wxDATAVIEW_CELL_EDITABLE),
+		Item(NULL), EditItem(NULL)
+    {
+    }
+
+    virtual bool HasEditorCtrl() const
+    {
+        return true;
+    }
+
+    virtual wxWindow* CreateEditorCtrl( wxWindow *parent, wxRect labelRect, const wxVariant &value )
+    {
+        EditItem = (ItemValue*)value.GetVoidPtr();
+
+        if (EditItem->Type == TYPE_TEXT)
+        {
+            wxTextCtrl* ctrl = new wxTextCtrl(parent, wxID_ANY, EditItem->Value,
+            	labelRect.GetPosition(),
+				labelRect.GetSize(),
+				wxTE_PROCESS_ENTER);
+            ctrl->SetInsertionPointEnd();
+            ctrl->SelectAll();
+
+            return ctrl;
+        }
+
+		wxChoice* c = new wxChoice(parent->GetParent(), wxID_ANY,
+				labelRect.GetPosition(),
+				labelRect.GetSize(),
+				EditItem->Choices);
+		c->Reparent(parent);
+		c->Move(labelRect.GetRight() - c->GetRect().width, wxDefaultCoord);
+		c->SetStringSelection( EditItem->Value );
+
+		return c;
+    }
+
+    virtual bool GetValueFromEditorCtrl( wxWindow* editor, wxVariant &value )
+    {
+        wxString s;
+        if (EditItem->Type == TYPE_TEXT)
+        {
+            wxTextCtrl *text = (wxTextCtrl*) editor;
+            s = text->GetValue();
+        }
+        else
+        {
+			wxChoice* c = (wxChoice*) editor;
+			s = c->GetStringSelection();
+        }
+        EditItem->Value = s;
+        value = EditItem;
+        return true;
+    }
+
+    virtual bool Render( wxRect rect, wxDC *dc, int state )
+    {
+        RenderText( Item->Value, 0, rect, dc, state );
+        return true;
+    }
+
+    virtual wxSize GetSize() const
+    {
+        wxSize sz;
+
+        if (Item->Type == TYPE_TEXT)
+        {
+            sz.IncTo(GetTextExtent(Item->Value));
+        }
+        else
+        {
+            for ( wxArrayString::const_iterator i = Item->Choices.begin(); i != Item->Choices.end(); ++i )
+            {
+                sz.IncTo(GetTextExtent(*i));
+            }
+
+            // Allow some space for the right-side button, which is approximately the
+            // size of a scrollbar (and getting pixel-exact value would be complicated).
+            // Also add some whitespace between the text and the button:
+            sz.x += wxSystemSettings::GetMetric(wxSYS_VSCROLL_X, m_editorCtrl);
+            sz.x += GetTextExtent("M").x;
+        }
+
+        return sz;
+    }
+
+    virtual bool SetValue( const wxVariant &value )
+    {
+        Item = (ItemValue*)value.GetVoidPtr();
+        return true;
+    }
+
+    virtual bool GetValue( wxVariant &value ) const
+    {
+        value = Item;
+        return true;
+    }
+};
+
+class PrefModel: public wxDataViewModel
+{
 public:
     TreeItem* Root;
     PrefModel(wxString title): wxDataViewModel()
@@ -339,47 +524,40 @@ public:
     }
     wxString GetColumnType(unsigned int column) const
     {
-        return "string";
+        return column == 0 ? "string" : "void*";
     }
     int Compare( const wxDataViewItem &item1, const wxDataViewItem &item2,
         unsigned int column, bool ascending ) const
     {
-        wxVariant value1, value2;
+        TreeItem* data1 = GetData(ascending ? item1 : item2);
+        TreeItem* data2 = GetData(ascending ? item2 : item1);
 
-        if ( HasValue(item1, column) )
-            GetValue( value1, item1, column );
-        if ( HasValue(item2, column) )
-            GetValue( value2, item2, column );
+        if (data1->ArrayIndex != -1 && data2->ArrayIndex != -1 &&
+        		data1->Parent == data2->Parent)
+        	return data1->ArrayIndex - data2->ArrayIndex;
 
-        if (!ascending)
-        {
-            wxVariant temp = value1;
-            value1 = value2;
-            value2 = temp;
-        }
-
-        wxString str1 = value1.GetString();
-        wxString str2 = value2.GetString();
-        int res = wxCmpNaturalGeneric( str1, str2 );
+        int res = wxCmpNaturalGeneric(*data1->GetCaption(), *data2->GetCaption());
         if (res)
             return res;
 
         // items must be different
-        wxUIntPtr id1 = wxPtrToUInt(item1.GetID()),
-                  id2 = wxPtrToUInt(item2.GetID());
-
-        return ascending ? id1 - id2 : id2 - id1;
+        return wxPtrToUInt(data1) - wxPtrToUInt(data2);
     }
     void GetValue(wxVariant& val, const wxDataViewItem& item, unsigned int column) const
     {
         TreeItem* data = GetData(item);
-        val = wxString(*(column == 0 ? data->GetCaption() : data->GetValue()));
+        if (column == 0)
+            val = wxString(*data->GetCaption());
+        else
+            val = new ItemValue(data);
     }
     bool SetValue(const wxVariant& val, const wxDataViewItem& item, unsigned int column)
     {
         TreeItem* data = GetData(item);
         if (column == 1) {
-            data->SetValue(val.GetString().t_str());
+            ItemValue* Item = (ItemValue*)val.GetVoidPtr();
+            data->SetValue(Item->Value.t_str());
+            Item->CacheValue();
         }
         return true;
     }
@@ -424,12 +602,13 @@ public:
 		dataView = new wxDataViewCtrl(this, wxID_ANY, wxDefaultPosition, wxSize(300, 300), wxDV_VARIABLE_LINE_HEIGHT);
 
         wxDataViewTextRenderer* rend0 = new wxDataViewTextRenderer("string", wxDATAVIEW_CELL_ACTIVATABLE);
-        wxDataViewColumn* column0 = new wxDataViewColumn("", rend0, 0, GetSize().GetWidth()/2, wxAlignment(wxALIGN_LEFT | wxALIGN_TOP), wxDATAVIEW_COL_RESIZABLE);
+        wxDataViewColumn* column0 = new wxDataViewColumn("", rend0, 0, GetSize().GetWidth()/2,
+        		wxAlignment(wxALIGN_LEFT | wxALIGN_TOP), wxDATAVIEW_COL_RESIZABLE);
         dataView->AppendColumn(column0);
         dataView->SetExpanderColumn(column0);
 
-        wxDataViewTextRenderer* rend1 = new wxDataViewTextRenderer("string", wxDATAVIEW_CELL_EDITABLE);
-        wxDataViewColumn* column1 = new wxDataViewColumn("", rend1, 1, GetSize().GetWidth()/2, wxAlignment(wxALIGN_LEFT | wxALIGN_TOP), wxDATAVIEW_COL_RESIZABLE);
+        wxDataViewColumn* column1 = new wxDataViewColumn("", new PrefItemRenderer(), 1,
+        		GetSize().GetWidth()/2, wxAlignment(wxALIGN_LEFT | wxALIGN_TOP), wxDATAVIEW_COL_RESIZABLE);
         dataView->AppendColumn(column1);
 
         PrefModel* prefModel = new PrefModel(title);
