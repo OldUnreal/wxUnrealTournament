@@ -1,5 +1,6 @@
 #include <wx/wx.h>
 #include <wx/dataview.h>
+#include <wx/uiaction.h>
 #include "WxNaturalSort.h"
 #include "Core.h"
 #include "Engine.h"
@@ -404,14 +405,46 @@ public:
     }
 };
 
+static void PrefItemRenderer_OnEditingStarted( wxDataViewEvent &event )
+{
+	wxDataViewColumn* column = event.GetDataViewColumn();
+	if (!column) return;
+	wxDataViewRenderer* rend = column->GetRenderer();
+	if (!rend) return;
+	wxWindow* ed = rend->GetEditorCtrl();
+	if (!ed) return;
+	wxChoice* choice = wxDynamicCast(ed, wxChoice);
+	if (!choice) return;
+    wxUIActionSimulator sim;
+    sim.Char(' '); // try open it by send space
+}
+
+static void PrefItemRenderer_OnChoice( wxCommandEvent &event )
+{
+	wxObject* obj = event.GetEventObject();
+	if (!obj) return;
+	wxChoice* choice = wxDynamicCast(obj, wxChoice);
+	if (!choice) return;
+	wxWindow* parent = choice->GetParent();
+	if (!parent) return;
+	wxDataViewCtrl* ctrl = wxDynamicCast(parent, wxDataViewCtrl);
+	if (!ctrl) return;
+	wxDataViewColumn* column = ctrl->GetColumn(1);
+	if (!column) return;
+	wxDataViewRenderer* rend = column->GetRenderer();
+	if (!rend) return;
+	rend->FinishEditing();
+}
+
 class PrefItemRenderer: public wxDataViewCustomRenderer
 {
 public:
     ItemValue* Item;
     ItemValue* EditItem;
+    BOOL Binded;
     PrefItemRenderer() :
         wxDataViewCustomRenderer(wxT("void*"), wxDATAVIEW_CELL_EDITABLE),
-		Item(NULL), EditItem(NULL)
+		Item(NULL), EditItem(NULL), Binded(false)
     {
     }
 
@@ -439,10 +472,17 @@ public:
 		wxChoice* c = new wxChoice(parent->GetParent(), wxID_ANY,
 				labelRect.GetPosition(),
 				labelRect.GetSize(),
-				EditItem->Choices);
+				EditItem->Choices); // XXX
 		c->Reparent(parent);
 		c->Move(labelRect.GetRight() - c->GetRect().width, wxDefaultCoord);
 		c->SetStringSelection( EditItem->Value );
+		c->Bind(wxEVT_CHOICE, &PrefItemRenderer_OnChoice, wxID_ANY);
+
+		if (!Binded)
+		{
+			Binded = true;
+			parent->Bind(wxEVT_DATAVIEW_ITEM_EDITING_STARTED, &PrefItemRenderer_OnEditingStarted, wxID_ANY);
+		}
 
 		return c;
     }
