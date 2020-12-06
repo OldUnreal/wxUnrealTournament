@@ -277,6 +277,11 @@ public:
         return !Loaded || Children.Num() > 0;
     }
 
+    BOOL HasValue()
+	{
+		return Property && Cast<UStructProperty>(Property) != NULL;
+	}
+
     void LazyLoadClass()
 	{
 		guard(TreeItem::LazyLoadClass);
@@ -611,6 +616,11 @@ public:
         TreeItem* data = GetData(item);
         return data->IsContainer();
     }
+    bool HasContainerColumns(const wxDataViewItem& item) const
+	{
+		TreeItem* data = GetData(item);
+		return data->HasValue();
+	}
     unsigned GetChildren(const wxDataViewItem& item, wxDataViewItemArray& children) const
     {
         int cnt = 0;
