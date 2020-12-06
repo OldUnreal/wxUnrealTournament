@@ -665,6 +665,7 @@ public:
         dataView->AssociateModel(prefModel);
 
         column0->SetSortOrder(true);
+        prefModel->Resort();
 
         dataView->Bind(wxEVT_DATAVIEW_ITEM_ACTIVATED, &wxFramePreferences::OnActivated, this, wxID_ANY);
 	}
