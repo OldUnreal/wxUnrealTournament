@@ -1,6 +1,7 @@
 #include <wx/wx.h>
 #include <wx/dataview.h>
 #include <wx/uiaction.h>
+#include <wx/display.h>
 #include "WxNaturalSort.h"
 #include "Core.h"
 #include "Engine.h"
@@ -420,6 +421,7 @@ public:
         wxDataViewCustomRenderer(wxT("void*"), wxDATAVIEW_CELL_EDITABLE),
 		Item(NULL), EditItem(NULL), Binded(false)
     {
+    	EnableEllipsize();
     }
 
     virtual bool HasEditorCtrl() const
@@ -640,25 +642,135 @@ public:
     }
 };
 
-class wxFramePreferences : public wxFrame
+class wxUTFrame : public wxFrame
+{
+public:
+	FName					PersistentName;
+    // construction
+    wxUTFrame(FName InPersistentName, wxWindow *parent,
+	   wxWindowID id,
+	   const wxString& title,
+	   const wxPoint& pos = wxDefaultPosition,
+	   const wxSize& size = wxDefaultSize,
+	   long style = wxDEFAULT_FRAME_STYLE,
+	   const wxString& name = wxASCII_STR(wxFrameNameStr)):
+	   PersistentName(InPersistentName),
+       wxFrame(parent, id, title, pos, size, style, name)
+    {
+    	Connect(GetId(), wxEVT_SIZE, wxSizeEventHandler(wxUTFrame::OnSize));
+    	Connect(GetId(), wxEVT_MOVE, wxMoveEventHandler(wxUTFrame::OnMove));
+
+    	LoadState();
+    }
+    void LoadState()
+    {
+    	// Retrieve remembered position.
+		FString Pos;
+		if
+		(	PersistentName!=NAME_None
+		&&	GConfig->GetString( TEXT("WindowPositions"), *PersistentName, Pos ) )
+		{
+			int x, y, nWidth, nHeight;
+			// Get saved position.
+			Parse( *Pos, TEXT("X="), x );
+			Parse( *Pos, TEXT("Y="), y );
+			if( GetWindowStyle() & wxRESIZE_BORDER )
+			{
+				Parse( *Pos, TEXT("XL="), nWidth );
+				Parse( *Pos, TEXT("YL="), nHeight );
+			}
+
+			// Count identical windows already opened.
+			INT Count=0;
+			for( INT i=0; i<wxTopLevelWindows.GetCount(); i++ )
+			{
+				wxWindow* win = wxTopLevelWindows.Item(i)->GetData();
+				wxUTFrame* fr = wxDynamicCast(win, wxUTFrame);
+				Count += fr && fr->PersistentName==PersistentName;
+			}
+			if( Count )
+			{
+				// Move away.
+				x += Count*16;
+				y += Count*16;
+			}
+
+			// Clip size to screen.
+			wxDisplay display(wxDisplay::GetFromWindow(this));
+			wxRect screen = display.GetClientArea();
+			if( x+nWidth  > screen.x + screen.width) x = screen.x + screen.width  - nWidth;
+			if( y+nHeight > screen.y + screen.height) y = screen.y + screen.height - nHeight;
+			if( x<0 )
+			{
+				if( GetWindowStyle() & wxRESIZE_BORDER )
+					nWidth += x;
+				x=0;
+			}
+			if( y<0 )
+			{
+				if( GetWindowStyle() & wxRESIZE_BORDER )
+					nHeight += y;
+				y=0;
+			}
+			SetSize(nWidth, nHeight);
+			SetPosition(wxPoint(x, y));
+		}
+    }
+    void SaveState()
+    {
+    	if( PersistentName!=NAME_None && PersistentName.IsValid() && !IsMaximized() )
+		{
+    		wxPoint pos = GetPosition();
+    		wxSize size = GetSize();
+			GConfig->SetString( TEXT("WindowPositions"), *PersistentName,
+					*FString::Printf( TEXT("(X=%i,Y=%i,XL=%i,YL=%i)"), pos.x, pos.y, size.x, size.y ) );
+		}
+    }
+    void OnSize(wxSizeEvent& event)
+	{
+    	SaveState();
+	}
+    void OnMove(wxMoveEvent& event)
+	{
+		SaveState();
+	}
+    int LoadSplitWidth(int min, int max)
+    {
+    	int DividerWidth = 0;
+    	if( PersistentName!=NAME_None )
+    		GConfig->GetInt( TEXT("WindowPositions"), *(FString(*PersistentName)+TEXT(".Split")), DividerWidth );
+    	return DividerWidth < min ? min : (DividerWidth > max ? max : DividerWidth);
+    }
+    void SaveSplitWidth(int DividerWidth)
+    {
+    	if (DividerWidth == wxCOL_WIDTH_DEFAULT) return;
+    	if( PersistentName!=NAME_None )
+    		GConfig->SetInt( TEXT("WindowPositions"), *(FString(*PersistentName)+TEXT(".Split")), DividerWidth );
+    }
+};
+
+class wxFramePreferences : public wxUTFrame
 {
     wxDataViewCtrl* dataView;
 public:
 	wxFramePreferences(wxString title, int xpos, int ypos, int width, int height)
-		: wxFrame((wxFrame*)NULL, wxID_ANY, title, wxPoint(xpos, ypos), wxSize(width, height), wxCAPTION | wxMAXIMIZE_BOX | wxCLOSE_BOX | wxRESIZE_BORDER) // | wxFRAME_TOOL_WINDOW)
+		: wxUTFrame(TEXT("Preferences"), (wxFrame*)NULL, wxID_ANY, title, wxPoint(xpos, ypos), wxSize(width, height),
+			wxCAPTION | wxMAXIMIZE_BOX | wxCLOSE_BOX | wxRESIZE_BORDER) // | wxFRAME_TOOL_WINDOW)
 	{
 		Connect(GetId(), wxEVT_CLOSE_WINDOW, wxCommandEventHandler(wxFramePreferences::OnClose));
 
-		dataView = new wxDataViewCtrl(this, wxID_ANY, wxDefaultPosition, wxSize(300, 300), wxDV_VARIABLE_LINE_HEIGHT | wxDV_VERT_RULES);
+		dataView = new wxDataViewCtrl(this, wxID_ANY, wxDefaultPosition, GetClientSize(), wxDV_VARIABLE_LINE_HEIGHT | wxDV_VERT_RULES);
+
+		int DividerWidth = LoadSplitWidth(wxDVC_DEFAULT_MINWIDTH, GetClientSize().GetWidth() - wxDVC_DEFAULT_MINWIDTH);
 
         wxDataViewTextRenderer* rend0 = new wxDataViewTextRenderer("string", wxDATAVIEW_CELL_ACTIVATABLE);
-        wxDataViewColumn* column0 = new wxDataViewColumn("", rend0, 0, GetSize().GetWidth()/2,
+        wxDataViewColumn* column0 = new wxDataViewColumn("", rend0, 0, DividerWidth,
         		wxAlignment(wxALIGN_LEFT | wxALIGN_TOP), wxDATAVIEW_COL_RESIZABLE);
         dataView->AppendColumn(column0);
         dataView->SetExpanderColumn(column0);
 
         wxDataViewColumn* column1 = new wxDataViewColumn("", new PrefItemRenderer(), 1,
-        		GetSize().GetWidth()/2, wxAlignment(wxALIGN_LEFT | wxALIGN_TOP), wxDATAVIEW_COL_RESIZABLE);
+        		wxDVC_DEFAULT_MINWIDTH, wxAlignment(wxALIGN_LEFT | wxALIGN_TOP), 0);
         dataView->AppendColumn(column1);
 
         PrefModel* prefModel = new PrefModel(title);
@@ -668,6 +780,17 @@ public:
         prefModel->Resort();
 
         dataView->Bind(wxEVT_DATAVIEW_ITEM_ACTIVATED, &wxFramePreferences::OnActivated, this, wxID_ANY);
+
+        wxFont Font = GetFont();
+        Font.SetFractionalPointSize(9.0);
+        SetFont(Font);
+
+		Connect(GetId(), wxEVT_ACTIVATE , wxActivateEventHandler(wxFramePreferences::OnActivate));
+	}
+
+	void OnActivate(wxActivateEvent& event)
+	{
+		SaveColumnWidth();
 	}
 
 	void OnActivated( wxDataViewEvent &event )
@@ -685,7 +808,13 @@ public:
 
 	void OnClose(wxCommandEvent& event)
 	{
+		SaveColumnWidth();
 		Hide();
+	}
+
+	void SaveColumnWidth()
+	{
+		SaveSplitWidth(dataView->GetColumn(0)->GetWidth());
 	}
 
 	~wxFramePreferences()
@@ -710,7 +839,6 @@ private:
 		{
 			if (!wxPreferences) {
 				wxPreferences = new wxFramePreferences(LocalizeGeneral("AdvancedOptionsTitle", TEXT("Window")), 100, 100, 500, 600);
-				wxPreferences->Center();
 			}
 
 			if (GCurrentViewport && GCurrentViewport->IsFullscreen())
