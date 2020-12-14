@@ -7,7 +7,22 @@
 #include "Engine.h"
 #include "FConfigCacheIni.h"
 
+// debug stuff
 #define __HERE__  GLog->Logf(TEXT("Here: %d"), __LINE__);
+
+size_t TimerUsed, TimerCnt;
+class Timer {
+public:
+	size_t cl;
+	Timer() {
+		cl = clock();
+	}
+	~Timer() {
+		TimerUsed += clock() - cl;
+		TimerCnt++;
+	}
+};
+// end debug stuff
 
 class TreeItem {
 public:
@@ -16,6 +31,7 @@ public:
     BOOL Loaded;
 
     FPreferencesInfo Prefs{};
+    wxString		Caption;
 
     UProperty*      Property;
 	INT				Offset;
@@ -25,7 +41,8 @@ public:
 	UBOOL	 Failed{};
 
     TreeItem(TreeItem* InParent, UProperty* InProperty, INT InOffset, INT InArrayIndex):
-        Parent(InParent), Property(InProperty), Offset(InOffset), ArrayIndex(InArrayIndex), Loaded(false)
+        Parent(InParent), Property(InProperty), Offset(InOffset), ArrayIndex(InArrayIndex),
+		Loaded(false), Caption()
     {
     }
 
@@ -33,28 +50,30 @@ public:
         TreeItem(NULL, NULL, -1, -1)
     {
         Prefs.Caption = InCaption;
+        Caption = *Prefs.Caption;
     }
 
     TreeItem(TreeItem* InParent, FPreferencesInfo InPrefs):
         TreeItem(InParent, NULL, -1, -1)
     {
         Prefs = InPrefs;
+        Caption = *Prefs.Caption;
     }
 
     TreeItem(TreeItem* InParent, UProperty* InProperty, FString InCaption, INT InOffset, INT InArrayIndex):
         TreeItem(InParent, InProperty, InOffset, InArrayIndex)
     {
         Prefs.Caption = InCaption;
+        Caption = *Prefs.Caption;
     }
 
-    FString GetCaption()
+    const wxString& GetCaption()
     {
-        guard(TreeItem::GetCaption);
-
-        return ArrayIndex == -1 ? Prefs.Caption :
-            FString::Printf( TEXT("[%i]"), ArrayIndex );
-
-        unguard;
+        if (ArrayIndex != -1)
+        {
+        	Caption = wxString::Format( TEXT("[%i]"), ArrayIndex );
+        }
+        return Caption;
     }
 
     void GetPropertyTextSafe(FString& Str, BYTE* ReadValue)
@@ -573,28 +592,31 @@ public:
     {
         return column == 0 ? "string" : "void*";
     }
-    int Compare( const wxDataViewItem &item1, const wxDataViewItem &item2,
-        unsigned int column, bool ascending ) const
+    virtual bool HasDefaultCompare () const
     {
-        TreeItem* data1 = GetData(ascending ? item1 : item2);
-        TreeItem* data2 = GetData(ascending ? item2 : item1);
-
-        if (data1->ArrayIndex != -1 && data2->ArrayIndex != -1 &&
-        		data1->Parent == data2->Parent)
-        	return data1->ArrayIndex - data2->ArrayIndex;
-
-        int res = wxCmpNaturalGeneric(*data1->GetCaption(), *data2->GetCaption());
-        if (res)
-            return res;
-
-        // items must be different
-        return wxPtrToUInt(data1) - wxPtrToUInt(data2);
+    	return false;
     }
+    static int Cmp( wxDataViewItem item1, wxDataViewItem item2)
+	{
+		TreeItem* data1 = (TreeItem*)item1.GetID();
+		TreeItem* data2 = (TreeItem*)item2.GetID();
+
+		if (data1->ArrayIndex != -1 && data2->ArrayIndex != -1 &&
+				data1->Parent == data2->Parent)
+		{
+			return data1->ArrayIndex - data2->ArrayIndex;
+		}
+		int res = wxCmpNaturalGeneric(data1->GetCaption(), data2->GetCaption());
+		if (res)
+			return res;
+		// items must be different
+		return wxPtrToUInt(data1) - wxPtrToUInt(data2);
+	}
     void GetValue(wxVariant& val, const wxDataViewItem& item, unsigned int column) const
     {
         TreeItem* data = GetData(item);
         if (column == 0)
-            val = wxString(*data->GetCaption());
+            val = data->GetCaption();
         else
             val = new ItemValue(data);
     }
@@ -633,6 +655,7 @@ public:
 		{
 		    children.Add(wxDataViewItem(&data->Children(i)));
 		}
+        children.Sort(&PrefModel::Cmp);
         return i;
     }
     TreeItem* GetData(const wxDataViewItem& item) const
@@ -712,8 +735,8 @@ public:
 					nHeight += y;
 				y=0;
 			}
-			SetSize(nWidth, nHeight);
 			SetPosition(wxPoint(x, y));
+			SetSize(nWidth, nHeight);
 		}
     }
     void SaveState()
@@ -776,7 +799,7 @@ public:
         PrefModel* prefModel = new PrefModel(title);
         dataView->AssociateModel(prefModel);
 
-        column0->SetSortOrder(true);
+        //column0->SetSortOrder(true);
         prefModel->Resort();
 
         dataView->Bind(wxEVT_DATAVIEW_ITEM_ACTIVATED, &wxFramePreferences::OnActivated, this, wxID_ANY);
