@@ -805,7 +805,9 @@ public:
         dataView->Bind(wxEVT_DATAVIEW_ITEM_ACTIVATED, &wxFramePreferences::OnActivated, this, wxID_ANY);
 
         wxFont Font = GetFont();
-        Font.SetFractionalPointSize(9.0);
+        float FontSize = 9.0;
+        GConfig->GetFloat(TEXT("GameLog"), TEXT("FontSize"), FontSize, TEXT("UnrealEd.ini"));
+        Font.SetFractionalPointSize(FontSize);
         SetFont(Font);
 
 		Connect(GetId(), wxEVT_ACTIVATE , wxActivateEventHandler(wxFramePreferences::OnActivate));
