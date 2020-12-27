@@ -31,7 +31,7 @@ public:
     BOOL Loaded;
 
     FPreferencesInfo Prefs{};
-    wxString		Caption;
+    wxString*		Caption;
 
     UProperty*      Property;
 	INT				Offset;
@@ -42,7 +42,7 @@ public:
 
     TreeItem(TreeItem* InParent, UProperty* InProperty, INT InOffset, INT InArrayIndex):
         Parent(InParent), Property(InProperty), Offset(InOffset), ArrayIndex(InArrayIndex),
-		Loaded(false), Caption()
+		Loaded(false), Caption(NULL)
     {
     }
 
@@ -50,30 +50,29 @@ public:
         TreeItem(NULL, NULL, -1, -1)
     {
         Prefs.Caption = InCaption;
-        Caption = *Prefs.Caption;
     }
 
     TreeItem(TreeItem* InParent, FPreferencesInfo InPrefs):
         TreeItem(InParent, NULL, -1, -1)
     {
         Prefs = InPrefs;
-        Caption = *Prefs.Caption;
     }
 
     TreeItem(TreeItem* InParent, UProperty* InProperty, FString InCaption, INT InOffset, INT InArrayIndex):
         TreeItem(InParent, InProperty, InOffset, InArrayIndex)
     {
         Prefs.Caption = InCaption;
-        Caption = *Prefs.Caption;
     }
 
     const wxString& GetCaption()
     {
-        if (ArrayIndex != -1)
-        {
-        	Caption = wxString::Format( TEXT("[%i]"), ArrayIndex );
-        }
-        return Caption;
+    	if (Caption == NULL)
+    	{
+			Caption = (ArrayIndex != -1) ? new wxString(wxString::Format( TEXT("[%i]"), ArrayIndex )) :
+				new wxString(*Prefs.Caption);
+    	}
+
+        return *Caption;
     }
 
     void GetPropertyTextSafe(FString& Str, BYTE* ReadValue)
