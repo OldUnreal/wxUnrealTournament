@@ -616,6 +616,21 @@ public:
     	return false;
     }
 
+    void OnResetToDefaultsButton(wxDataViewModel *model, const wxDataViewItem& item)
+	{
+    	guard(PrefItemRenderer::OnResetToDefaultsButton);
+    	Item->Data->LazyLoadClass();
+		if( Item->Data->Class )
+		{
+			UObject::ResetConfig( Item->Data->Class );
+
+			Item->Data->Children.Empty();
+			Item->Data->Loaded = false;
+			model->Cleared();
+		}
+		unguard;
+	}
+
     void OnArrayEmpty(wxDataViewModel *model, const wxDataViewItem& item)
     {
     	guard(PrefItemRenderer::OnArrayEmpty);
@@ -740,6 +755,10 @@ public:
         	{
         		AddButton(&Buttons[count++], LocalizeGeneral("DeleteButton", TEXT("Window")), &PrefItemRenderer::OnArrayDelete);
         		AddButton(&Buttons[count++], LocalizeGeneral("InsertButton", TEXT("Window")), &PrefItemRenderer::OnArrayInsert);
+        	}
+        	if (Item->Data->Class)
+        	{
+        		AddButton(&Buttons[count++], LocalizeGeneral("DefaultsButton", TEXT("Window")), &PrefItemRenderer::OnResetToDefaultsButton);
         	}
         }
 
