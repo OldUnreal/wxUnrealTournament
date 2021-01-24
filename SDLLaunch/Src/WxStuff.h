@@ -2,6 +2,8 @@
 #include <wx/dataview.h>
 #include <wx/uiaction.h>
 #include <wx/display.h>
+#include <wx/renderer.h>
+#include <wx/colour.h>
 #include "WxNaturalSort.h"
 #include "Core.h"
 #include "Engine.h"
@@ -104,7 +106,7 @@ public:
 
         if (Property)
         {
-            if( (Property->ArrayDim!=1 && ArrayIndex==-1) || Cast<UArrayProperty>(Property) )
+            if (IsExpandable(this) || (Property->ArrayDim!=1 && ArrayIndex==-1))
             {
                 // Array expander.
                 return TEXT("...");
@@ -131,6 +133,11 @@ public:
         return TEXT("");
 
         unguard;
+    }
+
+    static BOOL IsExpandable(TreeItem* Item)
+    {
+    	return Item && Item->Property && Cast<UArrayProperty>(Item->Property);
     }
 
     UProperty* GetParentProperty()
@@ -211,6 +218,14 @@ public:
         unguard;
     }
 
+    void AddArrayItem(INT i)
+    {
+    	UArrayProperty* ArrayProperty = Cast<UArrayProperty>(Property);
+    	TreeItem Add(this, ArrayProperty->Inner, Prefs.Caption, i * ArrayProperty->Inner->ElementSize, i);
+    	Add.Load();
+    	Children.AddItem(Add);
+    }
+
     void Load()
     {
         guard(TreeItem::Load);
@@ -263,8 +278,7 @@ public:
                 if (Array)
                     for (INT i = 0; i < Array->Num(); i++)
                     {
-                        TreeItem Add(this, ArrayProperty->Inner, Prefs.Caption, i * ArrayProperty->Inner->ElementSize, i);
-                        Children.AddItem(Add);
+                    	AddArrayItem(i);
                     }
             }
             else if ((StructProperty = Cast<UStructProperty>(Property)) != NULL)
@@ -429,14 +443,25 @@ public:
     }
 };
 
+#define MAX_BUTTONS 5
+
+class PrefItemRenderer;
+
+struct ButtonInfo
+{
+	wxString Label;
+	wxSize Size;
+	void (PrefItemRenderer::* Handler)(wxDataViewModel *model, const wxDataViewItem& item);
+};
+
 class PrefItemRenderer: public wxDataViewCustomRenderer
 {
 public:
     ItemValue* Item;
     ItemValue* EditItem;
     BOOL Binded;
-    PrefItemRenderer() :
-        wxDataViewCustomRenderer(wxT("void*"), wxDATAVIEW_CELL_EDITABLE),
+    PrefItemRenderer(wxDataViewCellMode mode) :
+        wxDataViewCustomRenderer(wxT("void*"), mode),
 		Item(NULL), EditItem(NULL), Binded(false)
     {
     	EnableEllipsize();
@@ -444,7 +469,7 @@ public:
 
     virtual bool HasEditorCtrl() const
     {
-        return true;
+        return GetMode() == wxDATAVIEW_CELL_EDITABLE;
     }
 
     virtual wxWindow* CreateEditorCtrl( wxWindow *parent, wxRect labelRect, const wxVariant &value )
@@ -532,15 +557,224 @@ public:
 
     virtual bool Render( wxRect rect, wxDC *dc, int state )
     {
-        RenderText( Item->Value, 0, rect, dc, state );
+    	wxString text = Item->Value;
+    	if (!HasEditorCtrl())
+    	{
+    		text = Item->Data->GetCaption();
+			wxDataViewCtrl* Win = GetOwner()->GetOwner();
+			wxRendererNative& Renderer = wxRendererNative::Get();
+			ButtonInfo Buttons[MAX_BUTTONS];
+			for (int i = GetButtons(&Buttons[0]) - 1; i >= 0; i--)
+			{
+				wxRect RectButton = GetButtonRect(rect, Buttons[i].Size);
+				Renderer.DrawPushButton(Win, *dc, RectButton, 0);
+				dc->SetTextForeground(*wxBLACK);
+				dc->DrawLabel(Buttons[i].Label, RectButton, wxALIGN_CENTER);
+			}
+    	}
+        RenderText( text, 0, rect, dc, state );
         return true;
+    }
+
+    wxRect GetButtonRect(wxRect& rect, wxSize& Size)
+    {
+    	wxRect RectButton;
+		RectButton.width = Size.x;
+		RectButton.height = rect.height;
+		RectButton.y = rect.y;
+		RectButton.x = rect.x + rect.width - RectButton.width;
+		rect.width = rect.width - RectButton.width;
+		return RectButton;
+    }
+
+    virtual bool ActivateCell(const wxRect& cell,
+            wxDataViewModel *model,
+            const wxDataViewItem& item,
+            unsigned int col,
+            const wxMouseEvent *mouseEvent)
+    {
+    	if (mouseEvent)
+    	{
+			wxRect rect = cell;
+    		wxPoint pos = mouseEvent->GetPosition();
+    		pos.x += rect.x;
+    		pos.y += rect.y;
+			ButtonInfo Buttons[MAX_BUTTONS];
+			for (int i = GetButtons(&Buttons[0]) - 1; i >= 0; i--)
+			{
+				wxRect RectButton = GetButtonRect(rect, Buttons[i].Size);
+				if (RectButton.Contains(pos))
+				{
+					if (Buttons[i].Handler)
+					{
+						(this->*Buttons[i].Handler)(model, item);
+					}
+					return true;
+				}
+			}
+    	}
+    	return false;
+    }
+
+    void OnArrayEmpty(wxDataViewModel *model, const wxDataViewItem& item)
+    {
+    	guard(PrefItemRenderer::OnArrayEmpty);
+		//!!only works with single selection
+		FArray* Addr = Item->Data->GetArrayAddress();
+		if (Addr)
+		{
+			UArrayProperty* Array = CastChecked<UArrayProperty>(Item->Data->Property);
+			for (INT i = 0; i < Addr->Num(); i++)
+				Array->Inner->DestroyValue((BYTE*)Addr->GetData() + (i * Array->Inner->ElementSize));
+			Addr->Empty(Array->Inner->ElementSize);
+			// stijn: this does not work... it calls saveconfig on the default object of a StrProperty class.
+			//Property->GetClass()->GetDefaultObject()->SaveConfig();
+			Array->GetOuterUField()->GetOwnerClass()->GetDefaultObject()->SaveConfig();
+
+			for (int i = Item->Data->Children.Num() - 1; i >= 0; i--) {
+				model->ItemDeleted(item, wxDataViewItem(&Item->Data->Children(i)));
+			}
+			Item->Data->Children.Empty();
+		}
+		unguard;
+    }
+
+    void OnArrayAdd(wxDataViewModel *model, const wxDataViewItem& item)
+	{
+    	guard(PrefItemRenderer::OnArrayAdd);
+		//!!only works with single selection
+		FArray* Addr = Item->Data->GetArrayAddress();
+		if( Addr )
+		{
+			UArrayProperty* Array = CastChecked<UArrayProperty>( Item->Data->Property );
+			int i = Addr->AddZeroed( Array->Inner->ElementSize, 1 );
+
+			Item->Data->AddArrayItem(i);
+			model->ItemAdded(item, wxDataViewItem(&Item->Data->Children(i)));
+		}
+		unguard;
+	}
+
+    void OnArrayDelete(wxDataViewModel *model, const wxDataViewItem& item)
+	{
+    	guard(PrefItemRenderer::OnArrayDelete);
+		//!!only works with single selection
+		TreeItem* Parent = Item->Data->Parent;
+		if (!Parent)
+			return;
+		UArrayProperty* Array = CastChecked<UArrayProperty>(Item->Data->Property->GetOuter());
+		FArray* Addr = Parent->GetArrayAddress();
+		if (Addr)
+		{
+			INT OldNum = Parent->Children.Num();
+			if (OldNum == 1) // don't delete the only array entry (bad idea).
+			{
+				SetValue(TEXT("None"));
+				model->ValueChanged(item, 1);
+				return;
+			}
+			INT ElementSize = Array->Inner->ElementSize;
+			INT Index = Item->Data->Offset / ElementSize;
+			Array->Inner->DestroyValue((BYTE*)Addr->GetData() + (Index * Array->Inner->ElementSize));
+			Addr->Remove(Index, 1, Array->Inner->ElementSize);
+			// stijn: this does not work... it calls saveconfig on the default object of a StrProperty class.
+			//Property->GetClass()->GetDefaultObject()->SaveConfig();
+			Array->GetOuterUField()->GetOwnerClass()->GetDefaultObject()->SaveConfig();
+
+			model->ItemDeleted(model->GetParent(item), wxDataViewItem(&Parent->Children(OldNum - 1)));
+			Parent->Children.RemoveNoRealloc(Index, OldNum - Index);
+			OldNum--;
+			for (int i = Index; i < OldNum; i++)
+			{
+				Parent->AddArrayItem(i);
+				model->ItemChanged(wxDataViewItem(&Parent->Children(i)));
+			}
+		}
+		unguard;
+	}
+
+    void OnArrayInsert(wxDataViewModel *model, const wxDataViewItem& item)
+	{
+    	guard(PrefItemRenderer::OnArrayInsert);
+		//!!only works with single selection
+    	TreeItem* Parent = Item->Data->Parent;
+		if (!Parent)
+			return;
+		UArrayProperty* Array = CastChecked<UArrayProperty>(Item->Data->Property->GetOuter());
+		FArray* Addr = Parent->GetArrayAddress();
+		if (Addr)
+		{
+			INT OldNum = Parent->Children.Num();
+			INT Index = Item->Data->Offset / Array->Inner->ElementSize;
+			Addr->Insert(Index, 1, Array->Inner->ElementSize);
+			appMemzero((BYTE*)Addr->GetData() + Index * Array->Inner->ElementSize, Array->Inner->ElementSize);
+
+			Parent->Children.RemoveNoRealloc(Index, OldNum - Index);
+			for (int i = Index; i <= OldNum; i++)
+			{
+				Parent->AddArrayItem(i);
+				if (i < OldNum)
+				{
+					model->ItemChanged(wxDataViewItem(&Parent->Children(i)));
+				}
+				else
+				{
+					model->ItemAdded(model->GetParent(item), wxDataViewItem(&Parent->Children(i)));
+				}
+			}
+		}
+		unguard;
+	}
+
+    int GetButtons(ButtonInfo* Buttons) const
+    {
+    	int count = 0;
+        if (Item->Data)
+        {
+        	if (TreeItem::IsExpandable(Item->Data))
+        	{
+        		AddButton(&Buttons[count++], LocalizeGeneral("EmptyButton", TEXT("Window")), &PrefItemRenderer::OnArrayEmpty);
+        		AddButton(&Buttons[count++], LocalizeGeneral("AddButton", TEXT("Window")), &PrefItemRenderer::OnArrayAdd);
+        	}
+        	if (TreeItem::IsExpandable(Item->Data->Parent))
+        	{
+        		AddButton(&Buttons[count++], LocalizeGeneral("DeleteButton", TEXT("Window")), &PrefItemRenderer::OnArrayDelete);
+        		AddButton(&Buttons[count++], LocalizeGeneral("InsertButton", TEXT("Window")), &PrefItemRenderer::OnArrayInsert);
+        	}
+        }
+
+        return count;
+    }
+
+    void AddButton(ButtonInfo* Button, const TCHAR* Label, void (PrefItemRenderer::* Handler)(wxDataViewModel *model,
+    		const wxDataViewItem& item)) const
+    {
+    	Button->Label = Label;
+    	Button->Handler = Handler;
+
+    	wxRendererNative& Renderer = wxRendererNative::Get();
+    	Button->Size = GetTextExtent(Button->Label);
+    	Button->Size.x += GetGapSize();
+    }
+
+    int GetGapSize() const
+    {
+    	return wxSystemSettings::GetMetric(wxSYS_VSCROLL_X, m_editorCtrl);
     }
 
     virtual wxSize GetSize() const
     {
         wxSize sz;
-
-        if (Item->Type == TYPE_TEXT)
+        if (!HasEditorCtrl())
+        {
+        	sz.IncTo(GetTextExtent(Item->Data->GetCaption()));
+        	ButtonInfo Buttons[MAX_BUTTONS];
+			for (int i = GetButtons(&Buttons[0]) - 1; i >= 0; i--)
+			{
+				sz.x += Buttons[i].Size.x;
+			}
+        }
+        else if (Item->Type == TYPE_TEXT)
         {
             sz.IncTo(GetTextExtent(Item->Value));
         }
@@ -554,7 +788,7 @@ public:
             // Allow some space for the right-side button, which is approximately the
             // size of a scrollbar (and getting pixel-exact value would be complicated).
             // Also add some whitespace between the text and the button:
-            sz.x += wxSystemSettings::GetMetric(wxSYS_VSCROLL_X, m_editorCtrl);
+            sz.x += GetGapSize();
             sz.x += GetTextExtent("M").x;
         }
 
@@ -589,9 +823,9 @@ public:
     }
     wxString GetColumnType(unsigned int column) const
     {
-        return column == 0 ? "string" : "void*";
+        return "void*";
     }
-    virtual bool HasDefaultCompare () const
+    virtual bool HasDefaultCompare() const
     {
     	return false;
     }
@@ -614,10 +848,7 @@ public:
     void GetValue(wxVariant& val, const wxDataViewItem& item, unsigned int column) const
     {
         TreeItem* data = GetData(item);
-        if (column == 0)
-            val = data->GetCaption();
-        else
-            val = new ItemValue(data);
+        val = new ItemValue(data);
     }
     bool SetValue(const wxVariant& val, const wxDataViewItem& item, unsigned int column)
     {
@@ -785,13 +1016,15 @@ public:
 
 		int DividerWidth = LoadSplitWidth(wxDVC_DEFAULT_MINWIDTH, GetClientSize().GetWidth() - wxDVC_DEFAULT_MINWIDTH);
 
-        wxDataViewTextRenderer* rend0 = new wxDataViewTextRenderer("string", wxDATAVIEW_CELL_ACTIVATABLE);
-        wxDataViewColumn* column0 = new wxDataViewColumn("", rend0, 0, DividerWidth,
+		PrefItemRenderer* rend;
+		rend = new PrefItemRenderer(wxDATAVIEW_CELL_ACTIVATABLE);
+        wxDataViewColumn* column0 = new wxDataViewColumn("", rend, 0, DividerWidth,
         		wxAlignment(wxALIGN_LEFT | wxALIGN_TOP), wxDATAVIEW_COL_RESIZABLE);
         dataView->AppendColumn(column0);
         dataView->SetExpanderColumn(column0);
 
-        wxDataViewColumn* column1 = new wxDataViewColumn("", new PrefItemRenderer(), 1,
+        rend = new PrefItemRenderer(wxDATAVIEW_CELL_EDITABLE);
+        wxDataViewColumn* column1 = new wxDataViewColumn("", rend, 1,
         		wxDVC_DEFAULT_MINWIDTH, wxAlignment(wxALIGN_LEFT | wxALIGN_TOP), 0);
         dataView->AppendColumn(column1);
 
