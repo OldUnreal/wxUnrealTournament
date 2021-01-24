@@ -1062,6 +1062,7 @@ public:
         SetFont(Font);
 
 		Connect(GetId(), wxEVT_ACTIVATE , wxActivateEventHandler(wxFramePreferences::OnActivate));
+		Bind(wxEVT_SIZE, &wxFramePreferences::OnSize, this, wxID_ANY);
 	}
 
 	void OnActivate(wxActivateEvent& event)
@@ -1080,6 +1081,11 @@ public:
 			ctrl->Collapse(event.GetItem());
 		else
 			ctrl->Expand(event.GetItem());
+	}
+
+	void OnSize(wxSizeEvent& event)
+	{
+		dataView->SetSize(GetClientSize());
 	}
 
 	void OnClose(wxCommandEvent& event)
