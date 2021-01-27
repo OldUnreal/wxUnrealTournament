@@ -1033,7 +1033,8 @@ public:
 
 		dataView = new wxDataViewCtrl(this, wxID_ANY, wxDefaultPosition, GetClientSize(), wxDV_VARIABLE_LINE_HEIGHT | wxDV_VERT_RULES);
 
-		int DividerWidth = LoadSplitWidth(wxDVC_DEFAULT_MINWIDTH, GetClientSize().GetWidth() - wxDVC_DEFAULT_MINWIDTH);
+		int DividerWidth = 150; // min width
+		DividerWidth = LoadSplitWidth(DividerWidth, GetClientSize().GetWidth() - DividerWidth);
 
 		PrefItemRenderer* rend;
 		rend = new PrefItemRenderer(wxDATAVIEW_CELL_ACTIVATABLE);
