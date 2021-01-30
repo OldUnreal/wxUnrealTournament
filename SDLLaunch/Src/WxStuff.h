@@ -1118,7 +1118,7 @@ private:
 	UBOOL Exec( const TCHAR* Cmd, FOutputDevice& Ar )
 	{
 		guard(FExecHook::Exec);
-		if (ParseCommand(&Cmd, TEXT("pref")))
+		if (ParseCommand(&Cmd, TEXT("preferences")) || ParseCommand(&Cmd, TEXT("pref")))
 		{
 			if (!wxPreferences) {
 				wxPreferences = new wxFramePreferences(LocalizeGeneral("AdvancedOptionsTitle", TEXT("Window")), 100, 100, 500, 600);
