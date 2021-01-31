@@ -4,6 +4,7 @@
 #include <wx/display.h>
 #include <wx/renderer.h>
 #include <wx/colour.h>
+#include <wx/log.h>
 #include "WxNaturalSort.h"
 #include "Core.h"
 #include "Engine.h"
@@ -914,96 +915,45 @@ public:
     }
 };
 
-class wxUTFrame : public wxFrame
+class FramePos
 {
 public:
 	FName					PersistentName;
-    // construction
-    wxUTFrame(FName InPersistentName, wxWindow *parent,
-	   wxWindowID id,
-	   const wxString& title,
-	   const wxPoint& pos = wxDefaultPosition,
-	   const wxSize& size = wxDefaultSize,
-	   long style = wxDEFAULT_FRAME_STYLE,
-	   const wxString& name = wxASCII_STR(wxFrameNameStr)):
-	   PersistentName(InPersistentName),
-       wxFrame(parent, id, title, pos, size, style, name)
-    {
-    	Connect(GetId(), wxEVT_SIZE, wxSizeEventHandler(wxUTFrame::OnSize));
-    	Connect(GetId(), wxEVT_MOVE, wxMoveEventHandler(wxUTFrame::OnMove));
+	wxFrame*				Frame;
+	FramePos(FName InPersistentName, wxFrame* InFrame = NULL)
+	: PersistentName(InPersistentName)
+	, Frame(InFrame)
+	{
+		if (Frame) Bind(Frame);
+	}
+	void Bind(wxFrame* InFrame)
+	{
+		Frame = InFrame;
 
-    	LoadState();
-    }
-    void LoadState()
-    {
-    	// Retrieve remembered position.
-		FString Pos;
-		if
-		(	PersistentName!=NAME_None
-		&&	GConfig->GetString( TEXT("WindowPositions"), *PersistentName, Pos ) )
-		{
-			int x, y, nWidth, nHeight;
-			// Get saved position.
-			Parse( *Pos, TEXT("X="), x );
-			Parse( *Pos, TEXT("Y="), y );
-			if( GetWindowStyle() & wxRESIZE_BORDER )
-			{
-				Parse( *Pos, TEXT("XL="), nWidth );
-				Parse( *Pos, TEXT("YL="), nHeight );
-			}
+		InFrame->Bind(wxEVT_SIZE, &FramePos::OnSize, this);
+		InFrame->Bind(wxEVT_MOVE, &FramePos::OnMove, this);
 
-			// Count identical windows already opened.
-			INT Count=0;
-			for( INT i=0; i<wxTopLevelWindows.GetCount(); i++ )
-			{
-				wxWindow* win = wxTopLevelWindows.Item(i)->GetData();
-				wxUTFrame* fr = wxDynamicCast(win, wxUTFrame);
-				Count += fr && fr->PersistentName==PersistentName;
-			}
-			if( Count )
-			{
-				// Move away.
-				x += Count*16;
-				y += Count*16;
-			}
-
-			// Clip size to screen.
-			wxDisplay display(wxDisplay::GetFromWindow(this));
-			wxRect screen = display.GetClientArea();
-			if( x+nWidth  > screen.x + screen.width) x = screen.x + screen.width  - nWidth;
-			if( y+nHeight > screen.y + screen.height) y = screen.y + screen.height - nHeight;
-			if( x<0 )
-			{
-				if( GetWindowStyle() & wxRESIZE_BORDER )
-					nWidth += x;
-				x=0;
-			}
-			if( y<0 )
-			{
-				if( GetWindowStyle() & wxRESIZE_BORDER )
-					nHeight += y;
-				y=0;
-			}
-			SetPosition(wxPoint(x, y));
-			SetSize(nWidth, nHeight);
-		}
-    }
+		LoadState();
+	}
+	void LoadState();
     void SaveState()
     {
-    	if( PersistentName!=NAME_None && PersistentName.IsValid() && !IsMaximized() )
+    	if( PersistentName!=NAME_None && PersistentName.IsValid() && !Frame->IsMaximized() )
 		{
-    		wxPoint pos = GetPosition();
-    		wxSize size = GetSize();
+    		wxPoint pos = Frame->GetPosition();
+    		wxSize size = Frame->GetSize();
 			GConfig->SetString( TEXT("WindowPositions"), *PersistentName,
 					*FString::Printf( TEXT("(X=%i,Y=%i,XL=%i,YL=%i)"), pos.x, pos.y, size.x, size.y ) );
 		}
     }
     void OnSize(wxSizeEvent& event)
 	{
+    	event.Skip();
     	SaveState();
 	}
     void OnMove(wxMoveEvent& event)
 	{
+    	event.Skip();
 		SaveState();
 	}
     int LoadSplitWidth(int min, int max)
@@ -1021,6 +971,81 @@ public:
     }
 };
 
+class wxUTFrame : public wxFrame
+{
+public:
+	FramePos					MyFramePos;
+    // construction
+    wxUTFrame(FName InPersistentName, wxWindow *parent,
+	   wxWindowID id,
+	   const wxString& title,
+	   const wxPoint& pos = wxDefaultPosition,
+	   const wxSize& size = wxDefaultSize,
+	   long style = wxDEFAULT_FRAME_STYLE,
+	   const wxString& name = wxASCII_STR(wxFrameNameStr)):
+	   MyFramePos(FramePos(InPersistentName)),
+       wxFrame(parent, id, title, pos, size, style, name)
+    {
+    	MyFramePos.Bind(this);
+    }
+};
+
+
+void FramePos::LoadState()
+{
+	// Retrieve remembered position.
+	FString Pos;
+	if
+	(	PersistentName!=NAME_None
+	&&	GConfig->GetString( TEXT("WindowPositions"), *PersistentName, Pos ) )
+	{
+		int x, y, nWidth, nHeight;
+		// Get saved position.
+		Parse( *Pos, TEXT("X="), x );
+		Parse( *Pos, TEXT("Y="), y );
+		if( Frame->GetWindowStyle() & wxRESIZE_BORDER )
+		{
+			Parse( *Pos, TEXT("XL="), nWidth );
+			Parse( *Pos, TEXT("YL="), nHeight );
+		}
+
+		// Count identical windows already opened.
+		INT Count=0;
+		for( INT i=0; i<wxTopLevelWindows.GetCount(); i++ )
+		{
+			wxWindow* win = wxTopLevelWindows.Item(i)->GetData();
+			wxUTFrame* fr = wxDynamicCast(win, wxUTFrame);
+			Count += fr && fr->MyFramePos.PersistentName==PersistentName;
+		}
+		if( Count )
+		{
+			// Move away.
+			x += Count*16;
+			y += Count*16;
+		}
+
+		// Clip size to screen.
+		wxDisplay display(wxDisplay::GetFromWindow(Frame));
+		wxRect screen = display.GetClientArea();
+		if( x+nWidth  > screen.x + screen.width) x = screen.x + screen.width  - nWidth;
+		if( y+nHeight > screen.y + screen.height) y = screen.y + screen.height - nHeight;
+		if( x<0 )
+		{
+			if( Frame->GetWindowStyle() & wxRESIZE_BORDER )
+				nWidth += x;
+			x=0;
+		}
+		if( y<0 )
+		{
+			if( Frame->GetWindowStyle() & wxRESIZE_BORDER )
+				nHeight += y;
+			y=0;
+		}
+		Frame->SetPosition(wxPoint(x, y));
+		Frame->SetSize(nWidth, nHeight);
+	}
+}
+
 class wxFramePreferences : public wxUTFrame
 {
     wxDataViewCtrl* dataView;
@@ -1034,7 +1059,7 @@ public:
 		dataView = new wxDataViewCtrl(this, wxID_ANY, wxDefaultPosition, GetClientSize(), wxDV_VARIABLE_LINE_HEIGHT | wxDV_VERT_RULES);
 
 		int DividerWidth = 150; // min width
-		DividerWidth = LoadSplitWidth(DividerWidth, GetClientSize().GetWidth() - DividerWidth);
+		DividerWidth = MyFramePos.LoadSplitWidth(DividerWidth, GetClientSize().GetWidth() - DividerWidth);
 
 		PrefItemRenderer* rend;
 		rend = new PrefItemRenderer(wxDATAVIEW_CELL_ACTIVATABLE);
@@ -1097,12 +1122,34 @@ public:
 
 	void SaveColumnWidth()
 	{
-		SaveSplitWidth(dataView->GetColumn(0)->GetWidth());
+		MyFramePos.SaveSplitWidth(dataView->GetColumn(0)->GetWidth());
 	}
 
 	~wxFramePreferences()
 	{
+	}
+};
 
+class LogWindow : public FOutputDevice {
+public:
+	FOutputDevice* AuxOut;
+	wxLogWindow* LogWin;
+	FramePos* MyFramePos;
+	UBOOL ShowLog;
+	LogWindow()
+	: AuxOut( NULL )
+	, LogWin( NULL )
+	, MyFramePos( NULL )
+	, ShowLog( FALSE )
+	{}
+	void Serialize( const TCHAR* V, EName Event )
+	{
+		guard(LogWindow::Serialize);
+		if (LogWin)
+			wxLogMessage(wxT("%s"), V);
+		if( AuxOut )
+			AuxOut->Serialize( V, Event );
+		unguard;
 	}
 };
 
@@ -1134,6 +1181,16 @@ private:
 
 			return 1;
 		}
+		else if (ParseCommand(&Cmd, TEXT("ShowLog")))
+		{
+			if (LogWin && LogWin->LogWin) LogWin->LogWin->Show(true);
+			return 1;
+		}
+		else if (ParseCommand(&Cmd, TEXT("HideLog")))
+		{
+			if (LogWin && LogWin->LogWin) LogWin->LogWin->Show(false);
+			return 1;
+		}
 		else if (ParseCommand(&Cmd, TEXT("GETSYSTEMINI")))
 		{
 			Ar.Logf(TEXT("%ls"), dynamic_cast<FConfigCacheIni*>(GConfig) ? *dynamic_cast<FConfigCacheIni*>(GConfig)->SystemIni : TEXT("UnrealTournament.ini"));
@@ -1159,7 +1216,10 @@ private:
 	}
 public:
     UEngine* Engine;
+	LogWindow* LogWin;
 	FExecHook()
 	: wxPreferences( NULL )
+	, Engine( NULL )
+	, LogWin( NULL )
 	{}
 };

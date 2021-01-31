@@ -139,6 +139,8 @@ FFileManagerLinux FileManager;
 
 #include "WxStuff.h"
 
+LogWindow LogWin;
+
 // Used to check if the game is already running
 sem_t* RunningSemaphore = NULL;
 
@@ -300,7 +302,7 @@ static inline void FixIni()
 //
 // Creates a UEngine object.
 //
-static UEngine* InitEngine()
+static UEngine* InitEngine() // XXX
 {
 	guard(InitEngine);
 	DOUBLE LoadTime = appSecondsNew();
@@ -310,6 +312,12 @@ static UEngine* InitEngine()
 	static FExecHook GLocalHook;
 	GLocalHook.Engine = NULL;
 	GExec = &GLocalHook;
+
+	LogWin.LogWin = new wxLogWindow(NULL,
+		*FString::Printf( LocalizeGeneral("LogWindow",TEXT("Window")), LocalizeGeneral("Product",TEXT("Core")) ),
+		LogWin.ShowLog, false);
+	LogWin.MyFramePos = new FramePos(TEXT("GameLog"), LogWin.LogWin->GetFrame());
+	GLocalHook.LogWin = &LogWin;
 
 	// Update first-run.
 	INT FirstRun=0;
@@ -1247,6 +1255,13 @@ int wxUnrealTournament::OnRun()
 			}
 		}
 
+		LogWin.AuxOut = GLog;
+		GLog = &LogWin;
+
+		// Figure out whether to show log or splash screen.
+		UBOOL ShowLog = ParseParam(*CmdLine, TEXT("LOG"));
+		LogWin.ShowLog = ShowLog;
+
 		FString Filename = FString::Printf(TEXT("../Help/Splash%i.bmp"),((int)time(NULL)) % 5);
 		if( GFileManager->FileSize(*Filename)<0 )
 			Filename = FString(TEXT("../Help")) * TEXT("Logo.bmp");
@@ -1254,11 +1269,11 @@ int wxUnrealTournament::OnRun()
 			Filename = TEXT("../Help/Logo.bmp");
 
 		// Init splash screen.
-		if ( GFileManager->FileSize(*Filename) > 0)
+		if (!ShowLog && GFileManager->FileSize(*Filename) > 0)
 			InitSplash(*Filename );
 
 		// Init console log.
-		if (ParseParam(*CmdLine, TEXT("LOG")))
+		if (ParseParam(*CmdLine, TEXT("ConsoleLog")))
 		{
 		    Warn.AuxOut	= GLog;
 			GLog		= &Warn;
