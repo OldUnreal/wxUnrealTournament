@@ -1042,6 +1042,7 @@ public:
 	FString Title;
 	WConfigWizard()
 		: wxWizard(NULL, wxID_ANY)
+		, BoxSizer(NULL)
 		, Cancel(0)
 	{
 		SetIcon(wxIcon(wxT("../Help/Unreal.ico")));
