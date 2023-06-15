@@ -958,7 +958,7 @@ public:
 	}
     int LoadSplitWidth(int min, int max)
     {
-    	int DividerWidth = 0;
+    	int DividerWidth = (min + max)/2;
     	if( PersistentName!=NAME_None )
     		GConfig->GetInt( TEXT("WindowPositions"), *(FString(*PersistentName)+TEXT(".Split")), DividerWidth );
     	return DividerWidth < min ? min : (DividerWidth > max ? max : DividerWidth);
@@ -1058,8 +1058,7 @@ public:
 
 		dataView = new wxDataViewCtrl(this, wxID_ANY, wxDefaultPosition, GetClientSize(), wxDV_VARIABLE_LINE_HEIGHT | wxDV_VERT_RULES);
 
-		int DividerWidth = 150; // min width
-		DividerWidth = MyFramePos.LoadSplitWidth(DividerWidth, GetClientSize().GetWidth() - DividerWidth);
+		int DividerWidth = MyFramePos.LoadSplitWidth(200, GetClientSize().GetWidth() - 100);
 
 		PrefItemRenderer* rend;
 		rend = new PrefItemRenderer(wxDATAVIEW_CELL_ACTIVATABLE);
