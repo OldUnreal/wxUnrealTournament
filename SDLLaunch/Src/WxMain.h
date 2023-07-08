@@ -436,6 +436,8 @@ public:
 			FString Path=It->Object, Left, Right, Temp;
 			if( Path.Split(TEXT("."),&Left,&Right) )
 			{
+				if (GFileManager->FileSize(*(FString::Printf(TEXT("./%ls.so"), *Left))) <= 0)
+					continue;
 				INT DoShow=All, Priority=0;
 				INT DescFlags=0;
 				GConfig->GetInt(*Path,TEXT("DescFlags"),DescFlags);
