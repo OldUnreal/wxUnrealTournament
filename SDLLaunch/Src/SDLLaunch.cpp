@@ -7,6 +7,10 @@ Revision history:
 
 =============================================================================*/
 
+//#define WX
+
+#ifdef WX
+
 //#define WX_FIRST
 
 #ifdef WX_FIRST
@@ -29,6 +33,8 @@ Revision history:
 #endif
 
 #endif // WX_FIRST
+
+#endif // WX
 
 // System includes
 #include "SDLLaunchPrivate.h"
@@ -137,6 +143,8 @@ FFileManagerLinux FileManager;
 #include <mach-o/dyld.h>
 #endif
 
+#ifdef WX
+
 #include <semaphore.h>
 
 #ifndef WX_FIRST
@@ -154,7 +162,9 @@ LogWindow LogWin;
 // Used to check if the game is already running
 sem_t* RunningSemaphore = NULL;
 
-// SplashScreen
+#endif // WX
+
+//SplashScreen
 SDL_Renderer*	SplashRenderer = NULL;
 SDL_Surface*    SplashImage    = NULL;
 SDL_Texture*    SplashTexture  = NULL;
@@ -234,7 +244,7 @@ static inline void FixIni()
 		TEXT("GameRenderDevice"),
 		TEXT("WindowRenderDevice")
 	};
-
+	
 	const TCHAR* LegacyOrWindowsVideoRenderers[] =
 	{
         TEXT("D3DDrv.D3DRenderDevice"),
@@ -253,7 +263,7 @@ static inline void FixIni()
 		TEXT("Audio.GenericAudioSubsystem"),
 		TEXT("Galaxy.GalaxyAudioSubsystem"),
 	};
-
+	
     // A default config? Force it from WinDrv to SDLDrv... --ryan.
     //  Also clean up legacy Loki interfaces...
 	if( !ParseParam(appCmdLine(),TEXT("NoForceSDLDrv")) )
@@ -312,13 +322,15 @@ static inline void FixIni()
 //
 // Creates a UEngine object.
 //
-static UEngine* InitEngine() // XXX
+static UEngine* InitEngine()
 {
 	guard(InitEngine);
 	DOUBLE LoadTime = appSecondsNew();
 
 	// Set exec hook.
 	GExec = NULL;
+
+#ifdef WX
 	static FExecHook GLocalHook;
 	GLocalHook.Engine = NULL;
 	GExec = &GLocalHook;
@@ -328,6 +340,7 @@ static UEngine* InitEngine() // XXX
 		LogWin.ShowLog, false);
 	LogWin.MyFramePos = new FramePos(TEXT("GameLog"), LogWin.LogWin->GetFrame());
 	GLocalHook.LogWin = &LogWin;
+#endif // WX
 
 	// Update first-run.
 	INT FirstRun=0;
@@ -340,21 +353,23 @@ static UEngine* InitEngine() // XXX
 	// Create the global engine object.
 	UClass* EngineClass;
 	EngineClass = UObject::StaticLoadClass(
-		UGameEngine::StaticClass(), NULL,
-		TEXT("ini:Engine.Engine.GameEngine"),
-		NULL, LOAD_NoFail, NULL
+		UGameEngine::StaticClass(), NULL, 
+		TEXT("ini:Engine.Engine.GameEngine"), 
+		NULL, LOAD_NoFail, NULL 
 	);
 	UEngine* Engine = ConstructObject<UEngine>( EngineClass );
 	Engine->Init();
 
 	debugf( TEXT("Startup time: %f seconds."), appSecondsNew()-LoadTime );
 
+#ifdef WX
 	GLocalHook.Engine = Engine;
 
 	if (!GCurrentViewport && Engine->Client && Engine->Client->Viewports.Num())
-    {
-        GCurrentViewport = Engine->Client->Viewports(0);
-    }
+	{
+		GCurrentViewport = Engine->Client->Viewports(0);
+	}
+#endif // WX
 
 	return Engine;
 	unguard;
@@ -366,14 +381,16 @@ static UEngine* InitEngine() // XXX
 
 //
 // Exit wound.
-//
+// 
 int CleanUpOnExit(int ErrorLevel)
 {
+#ifdef WX
 	if (RunningSemaphore)
 	{
 		sem_close(RunningSemaphore);
 		sem_unlink("UnrealTournamentRunningSemaphore");
 	}
+#endif // WX
 
 	// Clean up our mess.
 	GIsRunning = 0;
@@ -432,7 +449,7 @@ static bool MainLoopIteration(MainLoopArgs *args)
 		return false;
 	}
 
-    try
+    try 
 	{
 		DOUBLE &OldTime = args->OldTime;
 		DOUBLE &SecondStartTime = args->SecondStartTime;
@@ -484,6 +501,34 @@ static void MainLoop( UEngine* Engine )
 	guard(MainLoop);
 	check(Engine);
 
+#ifndef WX
+	// Loop while running.
+	GIsRunning = 1;
+    MainLoopArgs *args = new MainLoopArgs;
+    args->OldTime = appSecondsNew();
+    args->SecondStartTime = args->OldTime;
+    args->TickCount = 0;
+    args->Engine = Engine;
+
+	#ifdef __EMSCRIPTEN__
+	emscripten_set_main_loop_arg(EmscriptenMainLoopIteration, args, 0, 1);
+	#else
+	while (MainLoopIteration(args))
+	{
+		// Enforce optional maximum tick rate.
+		guard(EnforceTickRate);
+		const FLOAT MaxTickRate = args->Engine->GetMaxTickRate();
+		if( MaxTickRate>0.0 )
+		{
+			DOUBLE Delta = (1.0/MaxTickRate) - (appSecondsNew()-args->OldTime);
+			appSleepLong( Max(0.0,Delta) );
+		}
+		unguard;
+	}
+	delete args;
+	CleanUpOnExit(0);
+	#endif
+#endif // WX
 
 	unguard;
 }
@@ -494,7 +539,7 @@ static void MainLoop( UEngine* Engine )
 
 //
 // Simple copy.
-//
+// 
 
 void SimpleCopy(TCHAR* fromfile, TCHAR* tofile)
 {
@@ -515,6 +560,20 @@ void SimpleCopy(TCHAR* fromfile, TCHAR* tofile)
 	fclose(from);
 	fclose(to);
 }
+
+void SDL_Init_()
+{
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK) == -1)
+	{
+		const TCHAR *err = appFromAnsi(SDL_GetError());
+		appErrorf(TEXT("Couldn't initialize SDL: %s\n"), err);
+		appExit();
+	}
+
+	atexit(sdl_atexit_handler);
+}
+
+#ifdef WX
 
 #define WINDOW_API
 
@@ -1100,7 +1159,11 @@ bool wxUnrealTournament::OnInit()
 	return true;
 }
 
-int wxUnrealTournament::OnRun()
+UEngine* wxEngine = NULL;
+
+#endif // WX
+
+int main_(int argc, char* argv[])
 {
 #if __STATIC_LINK
 	// Clean lookups.
@@ -1149,9 +1212,10 @@ int wxUnrealTournament::OnRun()
 #endif
 
 	UEngine* Engine = NULL;
-	guard(main);
-	try
-	{
+
+	guard(main); 
+	try 
+	{ 
 		GIsStarted		= 1;
 
 		// Set module name.
@@ -1159,7 +1223,7 @@ int wxUnrealTournament::OnRun()
 		appStrncpy( GModule, TEXT("UnrealTournament"), ARRAY_COUNT(GModule));
 
 		// Set the package name.
-		appStrncpy( const_cast<TCHAR*>(GPackage), appPackage(), 64);
+		appStrncpy( const_cast<TCHAR*>(GPackage), appPackage(), 64);	
 
 		// Get the command line.
 		FString CmdLine;
@@ -1167,14 +1231,17 @@ int wxUnrealTournament::OnRun()
 		{
 			if( i>1 )
 				CmdLine += TEXT(" ");
-			CmdLine += ANSI_TO_TCHAR(argv[i]);
+			CmdLine += ANSI_TO_TCHAR(argv[i]); 
 		}
 
 		// Init core.
-		GIsClient		= 1;
+		GIsClient		= 1; 
 		GIsGuarded		= 1;
 		appInit( TEXT("UnrealTournament"), *CmdLine, &Malloc, &Log, &Error, &Warn, &FileManager, FConfigCacheIni::Factory, 1 );
 
+#ifndef WX
+		SDL_Init_();
+#endif // WX
 		// Init static classes.
 #if __STATIC_LINK
 		AUTO_INITIALIZE_REGISTRANTS_ENGINE;
@@ -1225,6 +1292,7 @@ int wxUnrealTournament::OnRun()
 		GIsScriptable	= 1;
 		GLazyLoad		= !GIsClient || ParseParam(appCmdLine(), TEXT("LAZY"));
 
+#ifdef WX
 		// Check if we're already running
 		RunningSemaphore = sem_open("UnrealTournamentRunningSemaphore", O_CREAT | O_EXCL);
 		UBOOL AlreadyRunning = RunningSemaphore == SEM_FAILED && errno == EEXIST;
@@ -1279,6 +1347,15 @@ int wxUnrealTournament::OnRun()
 		UBOOL ShowLog = ParseParam(*CmdLine, TEXT("LOG"));
 		LogWin.ShowLog = ShowLog;
 
+		const TCHAR* ConsoleLog = TEXT("ConsoleLog");
+#else // WX
+		// Init windowing.
+		// InitWindowing();
+
+		UBOOL ShowLog = FALSE;
+		const TCHAR* ConsoleLog = TEXT("LOG");
+#endif // WX
+
 		FString Filename = FString::Printf(TEXT("../Help/Splash%i.bmp"),((int)time(NULL)) % 5);
 		if( GFileManager->FileSize(*Filename)<0 )
 			Filename = FString(TEXT("../Help")) * TEXT("Logo.bmp");
@@ -1288,19 +1365,19 @@ int wxUnrealTournament::OnRun()
 		// Init splash screen.
 		if (!ShowLog && GFileManager->FileSize(*Filename) > 0)
 			InitSplash(*Filename );
-
+	
 		// Init console log.
-		if (ParseParam(*CmdLine, TEXT("ConsoleLog")))
+		if (ParseParam(*CmdLine, ConsoleLog))
 		{
-		    Warn.AuxOut	= GLog;
+			Warn.AuxOut	= GLog;
 			GLog		= &Warn;
-	    }
+		}
 
 		// Init engine.
 		Engine = InitEngine();
 		if( Engine )
 		{
-		    debugf( NAME_Title, LocalizeGeneral("Run") );
+			debugf( NAME_Title, LocalizeGeneral("Run") );
 
 			// Remove splash screen.
 			ExitSplash();
@@ -1320,7 +1397,32 @@ int wxUnrealTournament::OnRun()
 		// Chained abort.  Do cleanup.
 		Error.HandleError();
 	}
-    unguard;
+
+#ifndef WX
+	if (Engine)
+	{
+		// Start main engine loop.
+		debugf( TEXT("Entering main loop.") );
+		if ( !GIsRequestingExit )
+			MainLoop( Engine );
+	}
+#else // WX
+	wxEngine = Engine;
+#endif // WX
+
+	unguard;
+
+	return 0;
+}
+
+#ifdef WX
+
+int wxUnrealTournament::OnRun()
+{
+	int ret = main_(argc, argv);
+
+	if (ret)
+		return ret;
 
 	// Start main engine loop.
 	debugf( TEXT("Entering main loop.") );
@@ -1332,7 +1434,7 @@ int wxUnrealTournament::OnRun()
 		Args->OldTime = appSecondsNew();
 		Args->SecondStartTime = Args->OldTime;
 		Args->TickCount = 0;
-		Args->Engine = Engine;
+		Args->Engine = wxEngine;
 
 		// Tick the game engine whenever possible
 		Connect(wxID_ANY, wxEVT_IDLE, wxIdleEventHandler(wxUnrealTournament::Tick));
@@ -1355,7 +1457,7 @@ void wxUnrealTournament::Tick(wxIdleEvent& Event)
 		}
 		unguard;
 
-        // draw wx gui here if we have one
+		// draw wx gui here if we have one
 		Event.RequestMore();
 	}
 	else
@@ -1378,6 +1480,8 @@ wxIMPLEMENT_CLASS(wxUnrealTournament, wxApp);
 wxIMPLEMENT_APP_NO_MAIN(wxUnrealTournament);
 wxIMPLEMENT_WX_THEME_SUPPORT;
 
+#endif // WX
+
 //
 // Entry point.
 //
@@ -1386,20 +1490,15 @@ int main( int argc, char* argv[] )
 	Malloc.Init();
 	GMalloc = &Malloc;
 
-	appChdirSystem();
+	if (!appChdirSystem())
+		wprintf(TEXT("WARNING: Could not chdir into the game's System folder\n"));
 
+#ifdef WX
 	//
 	// stijn: SDL needs to initialize _BEFORE_ wxWidgets. Otherwise, everything
 	// will blow up.
 	//
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_JOYSTICK) == -1)
-	{
-		const TCHAR *err = appFromAnsi(SDL_GetError());
-		appErrorf(TEXT("Couldn't initialize SDL: %s\n"), err);
-		appExit();
-	}
-
-	atexit(sdl_atexit_handler);
+	SDL_Init_();
 
 	// Start wxWindow
 	wxInitAllImageHandlers();
@@ -1407,6 +1506,10 @@ int main( int argc, char* argv[] )
 	wxTheApp->CallOnInit();
 	wxTheApp->OnRun();
 	wxEntryCleanup();
+#else // WX
+	main_(argc, argv);
+#endif // WX
 
     return(0);
 }
+
