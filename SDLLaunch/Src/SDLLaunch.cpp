@@ -830,7 +830,7 @@ int main_(int argc, char* argv[])
 
 	unguard;
 
-	return 0;
+	return -1;
 }
 
 #ifdef WX
@@ -839,7 +839,7 @@ int wxUnrealTournament::OnRun()
 {
 	int ret = main_(argc, argv);
 
-	if (ret)
+	if (ret != -1)
 		return ret;
 
 	// Start main engine loop.
