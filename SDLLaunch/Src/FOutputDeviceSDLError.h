@@ -29,10 +29,10 @@ public:
 	{
 #if defined(_DEBUG) && 0
 		// Just display info and break the debugger.
-  		debugf( NAME_Critical, TEXT("appError called while debugging:") );
+		debugf( NAME_Critical, TEXT("appError called while debugging:") );
 		debugf( NAME_Critical, Msg );
 		UObject::StaticShutdownAfterError();
-  		debugf( NAME_Critical, TEXT("Breaking debugger") );
+		debugf( NAME_Critical, TEXT("Breaking debugger") );
 		// stijn: the pointer needs to be volatile, otherwise the compiler can
 		// remove the null deref even at low optimization levels.
 		*(volatile BYTE*)NULL=0;

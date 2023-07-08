@@ -29,56 +29,56 @@ public:
 
 class TreeItem {
 public:
-    TreeItem* Parent;
-    TArray<TreeItem> Children;
-    BOOL Loaded;
+	TreeItem* Parent;
+	TArray<TreeItem> Children;
+	BOOL Loaded;
 
-    FPreferencesInfo Prefs{};
-    wxString*		Caption;
+	FPreferencesInfo Prefs{};
+	wxString*		Caption;
 
-    UProperty*      Property;
+	UProperty*      Property;
 	INT				Offset;
 	INT				ArrayIndex;
 
 	UClass*  Class{};
 	UBOOL	 Failed{};
 
-    TreeItem(TreeItem* InParent, UProperty* InProperty, INT InOffset, INT InArrayIndex):
-        Parent(InParent), Property(InProperty), Offset(InOffset), ArrayIndex(InArrayIndex),
+	TreeItem(TreeItem* InParent, UProperty* InProperty, INT InOffset, INT InArrayIndex):
+		Parent(InParent), Property(InProperty), Offset(InOffset), ArrayIndex(InArrayIndex),
 		Loaded(false), Caption(NULL)
-    {
-    }
+	{
+	}
 
-    TreeItem(FString InCaption):
-        TreeItem(NULL, NULL, -1, -1)
-    {
-        Prefs.Caption = InCaption;
-    }
+	TreeItem(FString InCaption):
+		TreeItem(NULL, NULL, -1, -1)
+	{
+		Prefs.Caption = InCaption;
+	}
 
-    TreeItem(TreeItem* InParent, FPreferencesInfo InPrefs):
-        TreeItem(InParent, NULL, -1, -1)
-    {
-        Prefs = InPrefs;
-    }
+	TreeItem(TreeItem* InParent, FPreferencesInfo InPrefs):
+		TreeItem(InParent, NULL, -1, -1)
+	{
+		Prefs = InPrefs;
+	}
 
-    TreeItem(TreeItem* InParent, UProperty* InProperty, FString InCaption, INT InOffset, INT InArrayIndex):
-        TreeItem(InParent, InProperty, InOffset, InArrayIndex)
-    {
-        Prefs.Caption = InCaption;
-    }
+	TreeItem(TreeItem* InParent, UProperty* InProperty, FString InCaption, INT InOffset, INT InArrayIndex):
+		TreeItem(InParent, InProperty, InOffset, InArrayIndex)
+	{
+		Prefs.Caption = InCaption;
+	}
 
-    const wxString& GetCaption()
-    {
-    	if (Caption == NULL)
-    	{
+	const wxString& GetCaption()
+	{
+		if (Caption == NULL)
+		{
 			Caption = (ArrayIndex != -1) ? new wxString(wxString::Format( TEXT("[%i]"), ArrayIndex )) :
 				new wxString(*Prefs.Caption);
-    	}
+		}
 
-        return *Caption;
-    }
+		return *Caption;
+	}
 
-    void GetPropertyTextSafe(FString& Str, BYTE* ReadValue)
+	void GetPropertyTextSafe(FString& Str, BYTE* ReadValue)
 	{
 		guard(TreeItem::GetPropertyTextSafe);
 		if (Cast<UClassProperty>(Property) && appStricmp(*Property->Category, TEXT("Drivers")) == 0)
@@ -99,49 +99,49 @@ public:
 		unguard;
 	}
 
-    FString GetValue()
-    {
-        guard(TreeItem::GetValue);
+	FString GetValue()
+	{
+		guard(TreeItem::GetValue);
 
-        BYTE* ReadValue = GetReadAddress( Property );
+		BYTE* ReadValue = GetReadAddress( Property );
 
-        if (Property)
-        {
-            if (IsExpandable(this) || (Property->ArrayDim!=1 && ArrayIndex==-1))
-            {
-                // Array expander.
-                return TEXT("...");
-            }
-            /* TODO
-            else if( ReadValue && Cast<UStructProperty>(Property) && Cast<UStructProperty>(Property)->Struct->GetFName()==NAME_Color )
-            {
-                // Color.
-                FillRect( hDC, RightRect + FRect(4,4,-4,-4).DPIScaled(WWindow::DPIX, WWindow::DPIY), hBrushBlack );
-                HBRUSH hBrush = CreateSolidBrush(COLORREF(*(DWORD*)ReadValue));
-                FillRect( hDC, RightRect + FRect(5,5,-5,-5).DPIScaled(WWindow::DPIX, WWindow::DPIY), hBrush );
-                DeleteObject( hBrush );
-            }
-            */
-            else if( ReadValue )
-            {
-                // Text.
-                FString Str = TEXT("");
-                GetPropertyTextSafe( Str, ReadValue );
-                return Str;
-            }
-        }
+		if (Property)
+		{
+			if (IsExpandable(this) || (Property->ArrayDim!=1 && ArrayIndex==-1))
+			{
+				// Array expander.
+				return TEXT("...");
+			}
+			/* TODO
+			else if( ReadValue && Cast<UStructProperty>(Property) && Cast<UStructProperty>(Property)->Struct->GetFName()==NAME_Color )
+			{
+				// Color.
+				FillRect( hDC, RightRect + FRect(4,4,-4,-4).DPIScaled(WWindow::DPIX, WWindow::DPIY), hBrushBlack );
+				HBRUSH hBrush = CreateSolidBrush(COLORREF(*(DWORD*)ReadValue));
+				FillRect( hDC, RightRect + FRect(5,5,-5,-5).DPIScaled(WWindow::DPIX, WWindow::DPIY), hBrush );
+				DeleteObject( hBrush );
+			}
+			*/
+			else if( ReadValue )
+			{
+				// Text.
+				FString Str = TEXT("");
+				GetPropertyTextSafe( Str, ReadValue );
+				return Str;
+			}
+		}
 
-        return TEXT("");
+		return TEXT("");
 
-        unguard;
-    }
+		unguard;
+	}
 
-    static BOOL IsExpandable(TreeItem* Item)
-    {
-    	return Item && Item->Property && Cast<UArrayProperty>(Item->Property);
-    }
+	static BOOL IsExpandable(TreeItem* Item)
+	{
+		return Item && Item->Property && Cast<UArrayProperty>(Item->Property);
+	}
 
-    UProperty* GetParentProperty()
+	UProperty* GetParentProperty()
 	{
 		if (Parent)
 		{
@@ -151,55 +151,55 @@ public:
 		return Property;
 	}
 
-    void SetProperty( UProperty* Property, TreeItem* Offset, const TCHAR* Value )
+	void SetProperty( UProperty* Property, TreeItem* Offset, const TCHAR* Value )
 	{
 		guard(TreeItem::SetProperty);
 
 		if (Class)
-        {
-            if (Cast<UClassProperty>(Property) && appStricmp(*Property->Category, TEXT("Drivers")) == 0)
-            {
-                // Save it.
-                UClassProperty* ClassProp = CastChecked<UClassProperty>(Property);
-                TArray<FRegistryObjectInfo> Classes;
-                UObject::GetRegistryObjects(Classes, UClass::StaticClass(), ClassProp->MetaClass, 0);
-                for (INT i = 0; i < Classes.Num(); i++)
-                {
-                    FString Path, Left, Right, Text;
-                    Path = *Classes(i).Object;
-                    if (Path.Split(TEXT("."), &Left, &Right))
-                        Text = Localize(*Right, TEXT("ClassCaption"), *Left);
-                    else
-                        Text = Localize(TEXT("Language"), TEXT("Language"), TEXT("Core"), *Path);
+		{
+			if (Cast<UClassProperty>(Property) && appStricmp(*Property->Category, TEXT("Drivers")) == 0)
+			{
+				// Save it.
+				UClassProperty* ClassProp = CastChecked<UClassProperty>(Property);
+				TArray<FRegistryObjectInfo> Classes;
+				UObject::GetRegistryObjects(Classes, UClass::StaticClass(), ClassProp->MetaClass, 0);
+				for (INT i = 0; i < Classes.Num(); i++)
+				{
+					FString Path, Left, Right, Text;
+					Path = *Classes(i).Object;
+					if (Path.Split(TEXT("."), &Left, &Right))
+						Text = Localize(*Right, TEXT("ClassCaption"), *Left);
+					else
+						Text = Localize(TEXT("Language"), TEXT("Language"), TEXT("Core"), *Path);
 
-                    if (appStricmp(*Text, Value) == 0)
-                        GConfig->SetString(*FObjectPathName(Property->GetOwnerClass()), Property->GetName(), *Classes(i).Object);
-                }
-            }
-            else
-            {
-                // To work with Array values.
-                if (appStricmp(Value, TEXT("")) != 0)
-                    Property->ImportText(Value, Offset->GetReadAddress(Property), PPF_Localized);
-                if (Prefs.Immediate)
-                {
-                    guard(Immediate);
-                    UProperty* ParentProp = Offset->GetParentProperty();
+					if (appStricmp(*Text, Value) == 0)
+						GConfig->SetString(*FObjectPathName(Property->GetOwnerClass()), Property->GetName(), *Classes(i).Object);
+				}
+			}
+			else
+			{
+				// To work with Array values.
+				if (appStricmp(Value, TEXT("")) != 0)
+					Property->ImportText(Value, Offset->GetReadAddress(Property), PPF_Localized);
+				if (Prefs.Immediate)
+				{
+					guard(Immediate);
+					UProperty* ParentProp = Offset->GetParentProperty();
 
-                    for (FObjectIterator It; It; ++It)
-                    {
-                        if (It->IsA(Class))
-                        {
-                            ParentProp->CopyCompleteValue(((BYTE*)* It) + ParentProp->Offset, GetReadAddress(ParentProp) + ParentProp->Offset);
-                            It->PostEditChange();
-                        }
-                    }
-                    unguard;
-                }
-                Class->GetDefaultObject()->SaveConfig();
-            }
-            return;
-        }
+					for (FObjectIterator It; It; ++It)
+					{
+						if (It->IsA(Class))
+						{
+							ParentProp->CopyCompleteValue(((BYTE*)* It) + ParentProp->Offset, GetReadAddress(ParentProp) + ParentProp->Offset);
+							It->PostEditChange();
+						}
+					}
+					unguard;
+				}
+				Class->GetDefaultObject()->SaveConfig();
+			}
+			return;
+		}
 
 		if( Parent )
 			Parent->SetProperty( Property, Offset, Value );
@@ -207,116 +207,116 @@ public:
 		unguard;
 	}
 
-    void SetValue(FString InValue)
-    {
-        guard(TreeItem::SetValue);
+	void SetValue(FString InValue)
+	{
+		guard(TreeItem::SetValue);
 
-        if (Property)
-        {
-            SetProperty( Property, this, *InValue );
-        }
+		if (Property)
+		{
+			SetProperty( Property, this, *InValue );
+		}
 
-        unguard;
-    }
+		unguard;
+	}
 
-    void AddArrayItem(INT i)
-    {
-    	UArrayProperty* ArrayProperty = Cast<UArrayProperty>(Property);
-    	TreeItem Add(this, ArrayProperty->Inner, Prefs.Caption, i * ArrayProperty->Inner->ElementSize, i);
-    	Add.Load();
-    	Children.AddItem(Add);
-    }
+	void AddArrayItem(INT i)
+	{
+		UArrayProperty* ArrayProperty = Cast<UArrayProperty>(Property);
+		TreeItem Add(this, ArrayProperty->Inner, Prefs.Caption, i * ArrayProperty->Inner->ElementSize, i);
+		Add.Load();
+		Children.AddItem(Add);
+	}
 
-    void Load()
-    {
-        guard(TreeItem::Load);
+	void Load()
+	{
+		guard(TreeItem::Load);
 
-        if (Loaded) return;
-        Loaded = true;
+		if (Loaded) return;
+		Loaded = true;
 
 		TArray<FPreferencesInfo> NewPrefs;
 		UObject::GetPreferences( NewPrefs, *Prefs.Caption, 0 );
 		for( INT i=0; i<NewPrefs.Num(); i++ )
 		{
-            TreeItem Add(this, NewPrefs(i));
-            Children.AddItem(Add);
+			TreeItem Add(this, NewPrefs(i));
+			Children.AddItem(Add);
 		}
 
 		LazyLoadClass();
-        if (Class)
+		if (Class)
 		{
-            Class->GetDefaultObject()->LoadConfig(1);//!!
-            for (TFieldIterator<UProperty> It(Class); It; ++It)
-            {
-                if
-                    (((It->PropertyFlags & CPF_Config) == CPF_Config)
-                        && (Class == It->GetOwnerClass() || !(It->PropertyFlags & CPF_GlobalConfig))
-                        && (Prefs.Category == NAME_None || It->Category == Prefs.Category))
-                    {
-                        TreeItem Add(this, *It, *It->GetFName(), It->Offset, -1);
-                        Children.AddItem(Add);
-                    }
-            }
+			Class->GetDefaultObject()->LoadConfig(1);//!!
+			for (TFieldIterator<UProperty> It(Class); It; ++It)
+			{
+				if
+					(((It->PropertyFlags & CPF_Config) == CPF_Config)
+						&& (Class == It->GetOwnerClass() || !(It->PropertyFlags & CPF_GlobalConfig))
+						&& (Prefs.Category == NAME_None || It->Category == Prefs.Category))
+					{
+						TreeItem Add(this, *It, *It->GetFName(), It->Offset, -1);
+						Children.AddItem(Add);
+					}
+			}
 		}
 
 		if (Property)
-        {
-            UStructProperty* StructProperty;
-            UArrayProperty* ArrayProperty;
-            if (Property->ArrayDim > 1 && ArrayIndex == -1)
-            {
-                // Expand array.
-                for (INT i = 0; i < Property->ArrayDim; i++)
-                {
-                    TreeItem Add(this, Property, Prefs.Caption, i * Property->ElementSize, i);
-                    Children.AddItem(Add);
-                }
-            }
-            else if ((ArrayProperty = Cast<UArrayProperty>(Property)) != NULL)
-            {
-                // Expand array.
-                FArray* Array = GetArrayAddress();
-                if (Array)
-                    for (INT i = 0; i < Array->Num(); i++)
-                    {
-                    	AddArrayItem(i);
-                    }
-            }
-            else if ((StructProperty = Cast<UStructProperty>(Property)) != NULL)
-            {
-                // Expand struct.
-                for (TFieldIterator<UProperty> It(StructProperty->Struct); It; ++It)
-                    if ((It->PropertyFlags & CPF_Config) == CPF_Config)
-                    {
-                        TreeItem Add(this, *It, *It->GetFName(), It->Offset, -1);
-                        Children.AddItem(Add);
-                    }
-            }
-            /* TODO
-            else if (Cast<UObjectProperty>(Property) != NULL)
-            {
-                // Expand object properties.
-                UObject** Object = (UObject * *)GetReadAddress(Property);
-                if (Object)
-                    Children.AddItem(new(TEXT("FCategoryItem"))FEditObjectItem(OwnerProperties, this, Object, Property));
-            }
-            */
-        }
+		{
+			UStructProperty* StructProperty;
+			UArrayProperty* ArrayProperty;
+			if (Property->ArrayDim > 1 && ArrayIndex == -1)
+			{
+				// Expand array.
+				for (INT i = 0; i < Property->ArrayDim; i++)
+				{
+					TreeItem Add(this, Property, Prefs.Caption, i * Property->ElementSize, i);
+					Children.AddItem(Add);
+				}
+			}
+			else if ((ArrayProperty = Cast<UArrayProperty>(Property)) != NULL)
+			{
+				// Expand array.
+				FArray* Array = GetArrayAddress();
+				if (Array)
+					for (INT i = 0; i < Array->Num(); i++)
+					{
+						AddArrayItem(i);
+					}
+			}
+			else if ((StructProperty = Cast<UStructProperty>(Property)) != NULL)
+			{
+				// Expand struct.
+				for (TFieldIterator<UProperty> It(StructProperty->Struct); It; ++It)
+					if ((It->PropertyFlags & CPF_Config) == CPF_Config)
+					{
+						TreeItem Add(this, *It, *It->GetFName(), It->Offset, -1);
+						Children.AddItem(Add);
+					}
+			}
+			/* TODO
+			else if (Cast<UObjectProperty>(Property) != NULL)
+			{
+				// Expand object properties.
+				UObject** Object = (UObject * *)GetReadAddress(Property);
+				if (Object)
+					Children.AddItem(new(TEXT("FCategoryItem"))FEditObjectItem(OwnerProperties, this, Object, Property));
+			}
+			*/
+		}
 
 		unguard;
-    }
+	}
 
-    BOOL IsContainer()
-    {
-        return !Loaded || Children.Num() > 0;
-    }
+	BOOL IsContainer()
+	{
+		return !Loaded || Children.Num() > 0;
+	}
 
-    BOOL HasValue()
+	BOOL HasValue()
 	{
 		return Property && Cast<UStructProperty>(Property) != NULL;
 	}
 
-    void LazyLoadClass()
+	void LazyLoadClass()
 	{
 		guard(TreeItem::LazyLoadClass);
 		if (Prefs.Class == TEXT("")) return;
@@ -337,26 +337,26 @@ public:
 		guard(TreeItem::GetReadAddress);
 
 		if (Class)
-            return &Class->Defaults(0);
+			return &Class->Defaults(0);
 
-        if (Property)
-        {
-            if (!Parent)
-                return NULL;
-            BYTE* AdrV = Parent->GetReadAddress(InProperty);
-            if (!AdrV)
-                return NULL;
-            AdrV += Offset;
-            if (Property && Property->IsA(UArrayProperty::StaticClass()))
-                return (BYTE*)((FArray*)AdrV)->GetData();
-            return AdrV;
-        }
+		if (Property)
+		{
+			if (!Parent)
+				return NULL;
+			BYTE* AdrV = Parent->GetReadAddress(InProperty);
+			if (!AdrV)
+				return NULL;
+			AdrV += Offset;
+			if (Property && Property->IsA(UArrayProperty::StaticClass()))
+				return (BYTE*)((FArray*)AdrV)->GetData();
+			return AdrV;
+		}
 
 		return Parent ? Parent->GetReadAddress(InProperty) : NULL;
 		unguard;
 	}
 
-    FArray* GetArrayAddress()
+	FArray* GetArrayAddress()
 	{
 		guard(TreeItem::GetArrayAddress);
 		if (!Parent)
@@ -369,7 +369,7 @@ public:
 		unguard;
 	}
 
-    void GetStates( TArray<FName>& States )
+	void GetStates( TArray<FName>& States )
 	{
 		guard(TreeItem::GetStates);
 		if( Class )
@@ -386,62 +386,62 @@ public:
 class ItemValue
 {
 public:
-    TreeItem* Data;
-    wxArrayString Choices;
-    wxString Value;
-    INT Type;
+	TreeItem* Data;
+	wxArrayString Choices;
+	wxString Value;
+	INT Type;
 
-    ItemValue(TreeItem* InData): Data(InData), Choices(), Type()
-    {
-        if (Data->Property)
-        {
-            UProperty* Property = Data->Property;
-            if( Property->IsA(UBoolProperty::StaticClass()) )
-            {
-                AddChoice( GFalse );
-                AddChoice( GTrue );
-            }
-            else if( Property->IsA(UByteProperty::StaticClass()) && Cast<UByteProperty>(Property)->Enum)
-            {
-                for( INT i=0; i<Cast<UByteProperty>(Property)->Enum->Names.Num(); i++ )
-                    AddChoice( *Cast<UByteProperty>(Property)->Enum->Names(i) );
-            }
-            else if( Property->IsA(UNameProperty::StaticClass()) && Data->Prefs.Caption==NAME_InitialState )
-            {
-                TArray<FName> States;
-                Data->GetStates( States );
-                AddChoice( *FName(NAME_None) );
-                for( INT i=0; i<States.Num(); i++ )
-                    AddChoice( *States(i) );
-            }
-            else if( Cast<UClassProperty>(Property) && appStricmp(*Property->Category,TEXT("Drivers"))==0 )
-            {
-                UClassProperty* ClassProp = CastChecked<UClassProperty>(Property);
-                TArray<FRegistryObjectInfo> Classes;
-                UObject::GetRegistryObjects( Classes, UClass::StaticClass(), ClassProp->MetaClass, 0 );
-                for( INT i=0; i<Classes.Num(); i++ )
-                {
-                    FString Path=Classes(i).Object, Left, Right;
-                    if( Path.Split(TEXT("."),&Left,&Right) )
-                        AddChoice( Localize(*Right,TEXT("ClassCaption"),*Left) );
-                    else
-                        AddChoice( Localize("Language","Language",TEXT("Core"),*Path) );
-                }
-            }
-        }
-        if (Choices.Count() > 0) Type = TYPE_LIST;
-        CacheValue();
-    }
+	ItemValue(TreeItem* InData): Data(InData), Choices(), Type()
+	{
+		if (Data->Property)
+		{
+			UProperty* Property = Data->Property;
+			if( Property->IsA(UBoolProperty::StaticClass()) )
+			{
+				AddChoice( GFalse );
+				AddChoice( GTrue );
+			}
+			else if( Property->IsA(UByteProperty::StaticClass()) && Cast<UByteProperty>(Property)->Enum)
+			{
+				for( INT i=0; i<Cast<UByteProperty>(Property)->Enum->Names.Num(); i++ )
+					AddChoice( *Cast<UByteProperty>(Property)->Enum->Names(i) );
+			}
+			else if( Property->IsA(UNameProperty::StaticClass()) && Data->Prefs.Caption==NAME_InitialState )
+			{
+				TArray<FName> States;
+				Data->GetStates( States );
+				AddChoice( *FName(NAME_None) );
+				for( INT i=0; i<States.Num(); i++ )
+					AddChoice( *States(i) );
+			}
+			else if( Cast<UClassProperty>(Property) && appStricmp(*Property->Category,TEXT("Drivers"))==0 )
+			{
+				UClassProperty* ClassProp = CastChecked<UClassProperty>(Property);
+				TArray<FRegistryObjectInfo> Classes;
+				UObject::GetRegistryObjects( Classes, UClass::StaticClass(), ClassProp->MetaClass, 0 );
+				for( INT i=0; i<Classes.Num(); i++ )
+				{
+					FString Path=Classes(i).Object, Left, Right;
+					if( Path.Split(TEXT("."),&Left,&Right) )
+						AddChoice( Localize(*Right,TEXT("ClassCaption"),*Left) );
+					else
+						AddChoice( Localize("Language","Language",TEXT("Core"),*Path) );
+				}
+			}
+		}
+		if (Choices.Count() > 0) Type = TYPE_LIST;
+		CacheValue();
+	}
 
-    void AddChoice(wxString Str)
-    {
-        Choices.Add(Str);
-    }
+	void AddChoice(wxString Str)
+	{
+		Choices.Add(Str);
+	}
 
-    void CacheValue()
-    {
-        Value = *Data->GetValue();
-    }
+	void CacheValue()
+	{
+		Value = *Data->GetValue();
+	}
 };
 
 #define MAX_BUTTONS 5
@@ -458,36 +458,36 @@ struct ButtonInfo
 class PrefItemRenderer: public wxDataViewCustomRenderer
 {
 public:
-    ItemValue* Item;
-    ItemValue* EditItem;
-    BOOL Binded;
-    PrefItemRenderer(wxDataViewCellMode mode) :
-        wxDataViewCustomRenderer(wxT("void*"), mode),
+	ItemValue* Item;
+	ItemValue* EditItem;
+	BOOL Binded;
+	PrefItemRenderer(wxDataViewCellMode mode) :
+		wxDataViewCustomRenderer(wxT("void*"), mode),
 		Item(NULL), EditItem(NULL), Binded(false)
-    {
-    	EnableEllipsize();
-    }
+	{
+		EnableEllipsize();
+	}
 
-    virtual bool HasEditorCtrl() const
-    {
-        return GetMode() == wxDATAVIEW_CELL_EDITABLE;
-    }
+	virtual bool HasEditorCtrl() const
+	{
+		return GetMode() == wxDATAVIEW_CELL_EDITABLE;
+	}
 
-    virtual wxWindow* CreateEditorCtrl( wxWindow *parent, wxRect labelRect, const wxVariant &value )
-    {
-        EditItem = (ItemValue*)value.GetVoidPtr();
+	virtual wxWindow* CreateEditorCtrl( wxWindow *parent, wxRect labelRect, const wxVariant &value )
+	{
+		EditItem = (ItemValue*)value.GetVoidPtr();
 
-        if (EditItem->Type == TYPE_TEXT)
-        {
-            wxTextCtrl* ctrl = new wxTextCtrl(parent, wxID_ANY, EditItem->Value,
-            	labelRect.GetPosition(),
+		if (EditItem->Type == TYPE_TEXT)
+		{
+			wxTextCtrl* ctrl = new wxTextCtrl(parent, wxID_ANY, EditItem->Value,
+				labelRect.GetPosition(),
 				labelRect.GetSize(),
 				wxTE_PROCESS_ENTER);
-            ctrl->SetInsertionPointEnd();
-            ctrl->SelectAll();
+			ctrl->SetInsertionPointEnd();
+			ctrl->SelectAll();
 
-            return ctrl;
-        }
+			return ctrl;
+		}
 
 		wxChoice* c = new wxChoice(parent->GetParent(), wxID_ANY,
 				labelRect.GetPosition(),
@@ -505,63 +505,63 @@ public:
 		}
 
 		return c;
-    }
+	}
 
-    void OnEditingStarted( wxDataViewEvent &event )
-    {
-    	wxDataViewColumn* column = event.GetDataViewColumn();
-    	if (!column) return;
-    	wxDataViewRenderer* rend = column->GetRenderer();
-    	if (!rend) return;
-    	wxWindow* ed = rend->GetEditorCtrl();
-    	if (!ed) return;
-    	wxChoice* choice = wxDynamicCast(ed, wxChoice);
-    	if (!choice) return;
-        wxUIActionSimulator sim;
-        sim.Char(' '); // try open it by send space
-    }
+	void OnEditingStarted( wxDataViewEvent &event )
+	{
+		wxDataViewColumn* column = event.GetDataViewColumn();
+		if (!column) return;
+		wxDataViewRenderer* rend = column->GetRenderer();
+		if (!rend) return;
+		wxWindow* ed = rend->GetEditorCtrl();
+		if (!ed) return;
+		wxChoice* choice = wxDynamicCast(ed, wxChoice);
+		if (!choice) return;
+		wxUIActionSimulator sim;
+		sim.Char(' '); // try open it by send space
+	}
 
-    void OnChoice( wxCommandEvent &event )
-    {
-    	wxObject* obj = event.GetEventObject();
-    	if (!obj) return;
-    	wxChoice* choice = wxDynamicCast(obj, wxChoice);
-    	if (!choice) return;
-    	wxWindow* parent = choice->GetParent();
-    	if (!parent) return;
-    	wxDataViewCtrl* ctrl = wxDynamicCast(parent, wxDataViewCtrl);
-    	if (!ctrl) return;
-    	wxDataViewColumn* column = ctrl->GetColumn(1);
-    	if (!column) return;
-    	wxDataViewRenderer* rend = column->GetRenderer();
-    	if (!rend) return;
-    	rend->FinishEditing();
-    }
+	void OnChoice( wxCommandEvent &event )
+	{
+		wxObject* obj = event.GetEventObject();
+		if (!obj) return;
+		wxChoice* choice = wxDynamicCast(obj, wxChoice);
+		if (!choice) return;
+		wxWindow* parent = choice->GetParent();
+		if (!parent) return;
+		wxDataViewCtrl* ctrl = wxDynamicCast(parent, wxDataViewCtrl);
+		if (!ctrl) return;
+		wxDataViewColumn* column = ctrl->GetColumn(1);
+		if (!column) return;
+		wxDataViewRenderer* rend = column->GetRenderer();
+		if (!rend) return;
+		rend->FinishEditing();
+	}
 
-    virtual bool GetValueFromEditorCtrl( wxWindow* editor, wxVariant &value )
-    {
-        wxString s;
-        if (EditItem->Type == TYPE_TEXT)
-        {
-            wxTextCtrl *text = (wxTextCtrl*) editor;
-            s = text->GetValue();
-        }
-        else
-        {
+	virtual bool GetValueFromEditorCtrl( wxWindow* editor, wxVariant &value )
+	{
+		wxString s;
+		if (EditItem->Type == TYPE_TEXT)
+		{
+			wxTextCtrl *text = (wxTextCtrl*) editor;
+			s = text->GetValue();
+		}
+		else
+		{
 			wxChoice* c = (wxChoice*) editor;
 			s = c->GetStringSelection();
-        }
-        EditItem->Value = s;
-        value = EditItem;
-        return true;
-    }
+		}
+		EditItem->Value = s;
+		value = EditItem;
+		return true;
+	}
 
-    virtual bool Render( wxRect rect, wxDC *dc, int state )
-    {
-    	wxString text = Item->Value;
-    	if (!HasEditorCtrl())
-    	{
-    		text = Item->Data->GetCaption();
+	virtual bool Render( wxRect rect, wxDC *dc, int state )
+	{
+		wxString text = Item->Value;
+		if (!HasEditorCtrl())
+		{
+			text = Item->Data->GetCaption();
 			wxDataViewCtrl* Win = GetOwner()->GetOwner();
 			wxRendererNative& Renderer = wxRendererNative::Get();
 			ButtonInfo Buttons[MAX_BUTTONS];
@@ -572,34 +572,34 @@ public:
 				dc->SetTextForeground(*wxBLACK);
 				dc->DrawLabel(Buttons[i].Label, RectButton, wxALIGN_CENTER);
 			}
-    	}
-        RenderText( text, 0, rect, dc, state );
-        return true;
-    }
+		}
+		RenderText( text, 0, rect, dc, state );
+		return true;
+	}
 
-    wxRect GetButtonRect(wxRect& rect, wxSize& Size)
-    {
-    	wxRect RectButton;
+	wxRect GetButtonRect(wxRect& rect, wxSize& Size)
+	{
+		wxRect RectButton;
 		RectButton.width = Size.x;
 		RectButton.height = rect.height;
 		RectButton.y = rect.y;
 		RectButton.x = rect.x + rect.width - RectButton.width;
 		rect.width = rect.width - RectButton.width;
 		return RectButton;
-    }
+	}
 
-    virtual bool ActivateCell(const wxRect& cell,
-            wxDataViewModel *model,
-            const wxDataViewItem& item,
-            unsigned int col,
-            const wxMouseEvent *mouseEvent)
-    {
-    	if (mouseEvent)
-    	{
+	virtual bool ActivateCell(const wxRect& cell,
+			wxDataViewModel *model,
+			const wxDataViewItem& item,
+			unsigned int col,
+			const wxMouseEvent *mouseEvent)
+	{
+		if (mouseEvent)
+		{
 			wxRect rect = cell;
-    		wxPoint pos = mouseEvent->GetPosition();
-    		pos.x += rect.x;
-    		pos.y += rect.y;
+			wxPoint pos = mouseEvent->GetPosition();
+			pos.x += rect.x;
+			pos.y += rect.y;
 			ButtonInfo Buttons[MAX_BUTTONS];
 			for (int i = GetButtons(&Buttons[0]) - 1; i >= 0; i--)
 			{
@@ -613,14 +613,14 @@ public:
 					return true;
 				}
 			}
-    	}
-    	return false;
-    }
+		}
+		return false;
+	}
 
-    void OnResetToDefaultsButton(wxDataViewModel *model, const wxDataViewItem& item)
+	void OnResetToDefaultsButton(wxDataViewModel *model, const wxDataViewItem& item)
 	{
-    	guard(PrefItemRenderer::OnResetToDefaultsButton);
-    	Item->Data->LazyLoadClass();
+		guard(PrefItemRenderer::OnResetToDefaultsButton);
+		Item->Data->LazyLoadClass();
 		if( Item->Data->Class )
 		{
 			UObject::ResetConfig( Item->Data->Class );
@@ -632,9 +632,9 @@ public:
 		unguard;
 	}
 
-    void OnArrayEmpty(wxDataViewModel *model, const wxDataViewItem& item)
-    {
-    	guard(PrefItemRenderer::OnArrayEmpty);
+	void OnArrayEmpty(wxDataViewModel *model, const wxDataViewItem& item)
+	{
+		guard(PrefItemRenderer::OnArrayEmpty);
 		//!!only works with single selection
 		FArray* Addr = Item->Data->GetArrayAddress();
 		if (Addr)
@@ -653,11 +653,11 @@ public:
 			Item->Data->Children.Empty();
 		}
 		unguard;
-    }
+	}
 
-    void OnArrayAdd(wxDataViewModel *model, const wxDataViewItem& item)
+	void OnArrayAdd(wxDataViewModel *model, const wxDataViewItem& item)
 	{
-    	guard(PrefItemRenderer::OnArrayAdd);
+		guard(PrefItemRenderer::OnArrayAdd);
 		//!!only works with single selection
 		FArray* Addr = Item->Data->GetArrayAddress();
 		if( Addr )
@@ -671,9 +671,9 @@ public:
 		unguard;
 	}
 
-    void OnArrayDelete(wxDataViewModel *model, const wxDataViewItem& item)
+	void OnArrayDelete(wxDataViewModel *model, const wxDataViewItem& item)
 	{
-    	guard(PrefItemRenderer::OnArrayDelete);
+		guard(PrefItemRenderer::OnArrayDelete);
 		//!!only works with single selection
 		TreeItem* Parent = Item->Data->Parent;
 		if (!Parent)
@@ -709,11 +709,11 @@ public:
 		unguard;
 	}
 
-    void OnArrayInsert(wxDataViewModel *model, const wxDataViewItem& item)
+	void OnArrayInsert(wxDataViewModel *model, const wxDataViewItem& item)
 	{
-    	guard(PrefItemRenderer::OnArrayInsert);
+		guard(PrefItemRenderer::OnArrayInsert);
 		//!!only works with single selection
-    	TreeItem* Parent = Item->Data->Parent;
+		TreeItem* Parent = Item->Data->Parent;
 		if (!Parent)
 			return;
 		UArrayProperty* Array = CastChecked<UArrayProperty>(Item->Data->Property->GetOuter());
@@ -742,114 +742,114 @@ public:
 		unguard;
 	}
 
-    int GetButtons(ButtonInfo* Buttons) const
-    {
-    	int count = 0;
-        if (Item->Data)
-        {
-        	if (TreeItem::IsExpandable(Item->Data))
-        	{
-        		AddButton(&Buttons[count++], LocalizeGeneral("EmptyButton", TEXT("Window")), &PrefItemRenderer::OnArrayEmpty);
-        		AddButton(&Buttons[count++], LocalizeGeneral("AddButton", TEXT("Window")), &PrefItemRenderer::OnArrayAdd);
-        	}
-        	if (TreeItem::IsExpandable(Item->Data->Parent))
-        	{
-        		AddButton(&Buttons[count++], LocalizeGeneral("DeleteButton", TEXT("Window")), &PrefItemRenderer::OnArrayDelete);
-        		AddButton(&Buttons[count++], LocalizeGeneral("InsertButton", TEXT("Window")), &PrefItemRenderer::OnArrayInsert);
-        	}
-        	if (Item->Data->Class)
-        	{
-        		AddButton(&Buttons[count++], LocalizeGeneral("DefaultsButton", TEXT("Window")), &PrefItemRenderer::OnResetToDefaultsButton);
-        	}
-        }
+	int GetButtons(ButtonInfo* Buttons) const
+	{
+		int count = 0;
+		if (Item->Data)
+		{
+			if (TreeItem::IsExpandable(Item->Data))
+			{
+				AddButton(&Buttons[count++], LocalizeGeneral("EmptyButton", TEXT("Window")), &PrefItemRenderer::OnArrayEmpty);
+				AddButton(&Buttons[count++], LocalizeGeneral("AddButton", TEXT("Window")), &PrefItemRenderer::OnArrayAdd);
+			}
+			if (TreeItem::IsExpandable(Item->Data->Parent))
+			{
+				AddButton(&Buttons[count++], LocalizeGeneral("DeleteButton", TEXT("Window")), &PrefItemRenderer::OnArrayDelete);
+				AddButton(&Buttons[count++], LocalizeGeneral("InsertButton", TEXT("Window")), &PrefItemRenderer::OnArrayInsert);
+			}
+			if (Item->Data->Class)
+			{
+				AddButton(&Buttons[count++], LocalizeGeneral("DefaultsButton", TEXT("Window")), &PrefItemRenderer::OnResetToDefaultsButton);
+			}
+		}
 
-        return count;
-    }
+		return count;
+	}
 
-    void AddButton(ButtonInfo* Button, const TCHAR* Label, void (PrefItemRenderer::* Handler)(wxDataViewModel *model,
-    		const wxDataViewItem& item)) const
-    {
-    	Button->Label = Label;
-    	Button->Handler = Handler;
+	void AddButton(ButtonInfo* Button, const TCHAR* Label, void (PrefItemRenderer::* Handler)(wxDataViewModel *model,
+			const wxDataViewItem& item)) const
+	{
+		Button->Label = Label;
+		Button->Handler = Handler;
 
-    	wxRendererNative& Renderer = wxRendererNative::Get();
-    	Button->Size = GetTextExtent(Button->Label);
-    	Button->Size.x += GetGapSize();
-    }
+		wxRendererNative& Renderer = wxRendererNative::Get();
+		Button->Size = GetTextExtent(Button->Label);
+		Button->Size.x += GetGapSize();
+	}
 
-    int GetGapSize() const
-    {
-    	return wxSystemSettings::GetMetric(wxSYS_VSCROLL_X, m_editorCtrl);
-    }
+	int GetGapSize() const
+	{
+		return wxSystemSettings::GetMetric(wxSYS_VSCROLL_X, m_editorCtrl);
+	}
 
-    virtual wxSize GetSize() const
-    {
-        wxSize sz;
-        if (!HasEditorCtrl())
-        {
-        	sz.IncTo(GetTextExtent(Item->Data->GetCaption()));
-        	ButtonInfo Buttons[MAX_BUTTONS];
+	virtual wxSize GetSize() const
+	{
+		wxSize sz;
+		if (!HasEditorCtrl())
+		{
+			sz.IncTo(GetTextExtent(Item->Data->GetCaption()));
+			ButtonInfo Buttons[MAX_BUTTONS];
 			for (int i = GetButtons(&Buttons[0]) - 1; i >= 0; i--)
 			{
 				sz.x += Buttons[i].Size.x;
 			}
-        }
-        else if (Item->Type == TYPE_TEXT)
-        {
-            sz.IncTo(GetTextExtent(Item->Value));
-        }
-        else
-        {
-            for ( wxArrayString::const_iterator i = Item->Choices.begin(); i != Item->Choices.end(); ++i )
-            {
-                sz.IncTo(GetTextExtent(*i));
-            }
+		}
+		else if (Item->Type == TYPE_TEXT)
+		{
+			sz.IncTo(GetTextExtent(Item->Value));
+		}
+		else
+		{
+			for ( wxArrayString::const_iterator i = Item->Choices.begin(); i != Item->Choices.end(); ++i )
+			{
+				sz.IncTo(GetTextExtent(*i));
+			}
 
-            // Allow some space for the right-side button, which is approximately the
-            // size of a scrollbar (and getting pixel-exact value would be complicated).
-            // Also add some whitespace between the text and the button:
-            sz.x += GetGapSize();
-            sz.x += GetTextExtent("M").x;
-        }
+			// Allow some space for the right-side button, which is approximately the
+			// size of a scrollbar (and getting pixel-exact value would be complicated).
+			// Also add some whitespace between the text and the button:
+			sz.x += GetGapSize();
+			sz.x += GetTextExtent("M").x;
+		}
 
-        return sz;
-    }
+		return sz;
+	}
 
-    virtual bool SetValue( const wxVariant &value )
-    {
-        Item = (ItemValue*)value.GetVoidPtr();
-        return true;
-    }
+	virtual bool SetValue( const wxVariant &value )
+	{
+		Item = (ItemValue*)value.GetVoidPtr();
+		return true;
+	}
 
-    virtual bool GetValue( wxVariant &value ) const
-    {
-        value = Item;
-        return true;
-    }
+	virtual bool GetValue( wxVariant &value ) const
+	{
+		value = Item;
+		return true;
+	}
 };
 
 class PrefModel: public wxDataViewModel
 {
 public:
-    TreeItem* Root;
-    PrefModel(wxString title): wxDataViewModel()
-    {
-        Root = new TreeItem(title.t_str());
-    }
-    ~PrefModel() {}
-    unsigned int GetColumnCount() const
-    {
-        return 2;
-    }
-    wxString GetColumnType(unsigned int column) const
-    {
-        return "void*";
-    }
-    virtual bool HasDefaultCompare() const
-    {
-    	return false;
-    }
-    static int Cmp( wxDataViewItem item1, wxDataViewItem item2)
+	TreeItem* Root;
+	PrefModel(wxString title): wxDataViewModel()
+	{
+		Root = new TreeItem(title.t_str());
+	}
+	~PrefModel() {}
+	unsigned int GetColumnCount() const
+	{
+		return 2;
+	}
+	wxString GetColumnType(unsigned int column) const
+	{
+		return "void*";
+	}
+	virtual bool HasDefaultCompare() const
+	{
+		return false;
+	}
+	static int Cmp( wxDataViewItem item1, wxDataViewItem item2)
 	{
 		TreeItem* data1 = (TreeItem*)item1.GetID();
 		TreeItem* data2 = (TreeItem*)item2.GetID();
@@ -865,54 +865,54 @@ public:
 		// items must be different
 		return wxPtrToUInt(data1) - wxPtrToUInt(data2);
 	}
-    void GetValue(wxVariant& val, const wxDataViewItem& item, unsigned int column) const
-    {
-        TreeItem* data = GetData(item);
-        val = new ItemValue(data);
-    }
-    bool SetValue(const wxVariant& val, const wxDataViewItem& item, unsigned int column)
-    {
-        TreeItem* data = GetData(item);
-        if (column == 1) {
-            ItemValue* Item = (ItemValue*)val.GetVoidPtr();
-            data->SetValue(Item->Value.t_str());
-            Item->CacheValue();
-        }
-        return true;
-    }
-    wxDataViewItem GetParent(const wxDataViewItem& item) const
-    {
-        TreeItem* data = GetData(item);
-        return wxDataViewItem(data->Parent == Root ? NULL : data->Parent);
-    }
-    bool IsContainer(const wxDataViewItem& item) const
-    {
-        TreeItem* data = GetData(item);
-        return data->IsContainer();
-    }
-    bool HasContainerColumns(const wxDataViewItem& item) const
+	void GetValue(wxVariant& val, const wxDataViewItem& item, unsigned int column) const
+	{
+		TreeItem* data = GetData(item);
+		val = new ItemValue(data);
+	}
+	bool SetValue(const wxVariant& val, const wxDataViewItem& item, unsigned int column)
+	{
+		TreeItem* data = GetData(item);
+		if (column == 1) {
+			ItemValue* Item = (ItemValue*)val.GetVoidPtr();
+			data->SetValue(Item->Value.t_str());
+			Item->CacheValue();
+		}
+		return true;
+	}
+	wxDataViewItem GetParent(const wxDataViewItem& item) const
+	{
+		TreeItem* data = GetData(item);
+		return wxDataViewItem(data->Parent == Root ? NULL : data->Parent);
+	}
+	bool IsContainer(const wxDataViewItem& item) const
+	{
+		TreeItem* data = GetData(item);
+		return data->IsContainer();
+	}
+	bool HasContainerColumns(const wxDataViewItem& item) const
 	{
 		TreeItem* data = GetData(item);
 		return data->HasValue();
 	}
-    unsigned GetChildren(const wxDataViewItem& item, wxDataViewItemArray& children) const
-    {
-        int cnt = 0;
-        TreeItem* data = GetData(item);
-        data->Load();
-        INT i;
-        for(i=0; i<data->Children.Num(); i++ )
+	unsigned GetChildren(const wxDataViewItem& item, wxDataViewItemArray& children) const
+	{
+		int cnt = 0;
+		TreeItem* data = GetData(item);
+		data->Load();
+		INT i;
+		for(i=0; i<data->Children.Num(); i++ )
 		{
-		    children.Add(wxDataViewItem(&data->Children(i)));
+			children.Add(wxDataViewItem(&data->Children(i)));
 		}
-        children.Sort(&PrefModel::Cmp);
-        return i;
-    }
-    TreeItem* GetData(const wxDataViewItem& item) const
-    {
-        if (!item.IsOk()) return Root;
-        return (TreeItem*)item.GetID();
-    }
+		children.Sort(&PrefModel::Cmp);
+		return i;
+	}
+	TreeItem* GetData(const wxDataViewItem& item) const
+	{
+		if (!item.IsOk()) return Root;
+		return (TreeItem*)item.GetID();
+	}
 };
 
 class FramePos
@@ -936,47 +936,47 @@ public:
 		LoadState();
 	}
 	void LoadState();
-    void SaveState()
-    {
-    	if( PersistentName!=NAME_None && PersistentName.IsValid() && !Frame->IsMaximized() )
+	void SaveState()
+	{
+		if( PersistentName!=NAME_None && PersistentName.IsValid() && !Frame->IsMaximized() )
 		{
-    		wxPoint pos = Frame->GetPosition();
-    		wxSize size = Frame->GetSize();
+			wxPoint pos = Frame->GetPosition();
+			wxSize size = Frame->GetSize();
 			GConfig->SetString( TEXT("WindowPositions"), *PersistentName,
 					*FString::Printf( TEXT("(X=%i,Y=%i,XL=%i,YL=%i)"), pos.x, pos.y, size.x, size.y ) );
 		}
-    }
-    void OnSize(wxSizeEvent& event)
-	{
-    	event.Skip();
-    	SaveState();
 	}
-    void OnMove(wxMoveEvent& event)
+	void OnSize(wxSizeEvent& event)
 	{
-    	event.Skip();
+		event.Skip();
 		SaveState();
 	}
-    int LoadSplitWidth(int min, int max)
-    {
-    	int DividerWidth = (min + max)/2;
-    	if( PersistentName!=NAME_None )
-    		GConfig->GetInt( TEXT("WindowPositions"), *(FString(*PersistentName)+TEXT(".Split")), DividerWidth );
-    	return DividerWidth < min ? min : (DividerWidth > max ? max : DividerWidth);
-    }
-    void SaveSplitWidth(int DividerWidth)
-    {
-    	if (DividerWidth == wxCOL_WIDTH_DEFAULT) return;
-    	if( PersistentName!=NAME_None )
-    		GConfig->SetInt( TEXT("WindowPositions"), *(FString(*PersistentName)+TEXT(".Split")), DividerWidth );
-    }
+	void OnMove(wxMoveEvent& event)
+	{
+		event.Skip();
+		SaveState();
+	}
+	int LoadSplitWidth(int min, int max)
+	{
+		int DividerWidth = (min + max)/2;
+		if( PersistentName!=NAME_None )
+			GConfig->GetInt( TEXT("WindowPositions"), *(FString(*PersistentName)+TEXT(".Split")), DividerWidth );
+		return DividerWidth < min ? min : (DividerWidth > max ? max : DividerWidth);
+	}
+	void SaveSplitWidth(int DividerWidth)
+	{
+		if (DividerWidth == wxCOL_WIDTH_DEFAULT) return;
+		if( PersistentName!=NAME_None )
+			GConfig->SetInt( TEXT("WindowPositions"), *(FString(*PersistentName)+TEXT(".Split")), DividerWidth );
+	}
 };
 
 class wxUTFrame : public wxFrame
 {
 public:
 	FramePos					MyFramePos;
-    // construction
-    wxUTFrame(FName InPersistentName, wxWindow *parent,
+	// construction
+	wxUTFrame(FName InPersistentName, wxWindow *parent,
 	   wxWindowID id,
 	   const wxString& title,
 	   const wxPoint& pos = wxDefaultPosition,
@@ -984,10 +984,10 @@ public:
 	   long style = wxDEFAULT_FRAME_STYLE,
 	   const wxString& name = wxASCII_STR(wxFrameNameStr)):
 	   MyFramePos(FramePos(InPersistentName)),
-       wxFrame(parent, id, title, pos, size, style, name)
-    {
-    	MyFramePos.Bind(this);
-    }
+	   wxFrame(parent, id, title, pos, size, style, name)
+	{
+		MyFramePos.Bind(this);
+	}
 };
 
 
@@ -1048,7 +1048,7 @@ void FramePos::LoadState()
 
 class wxFramePreferences : public wxUTFrame
 {
-    wxDataViewCtrl* dataView;
+	wxDataViewCtrl* dataView;
 public:
 	wxFramePreferences(wxString title, int xpos, int ypos, int width, int height)
 		: wxUTFrame(TEXT("Preferences"), (wxFrame*)NULL, wxID_ANY, title, wxPoint(xpos, ypos), wxSize(width, height),
@@ -1062,29 +1062,29 @@ public:
 
 		PrefItemRenderer* rend;
 		rend = new PrefItemRenderer(wxDATAVIEW_CELL_ACTIVATABLE);
-        wxDataViewColumn* column0 = new wxDataViewColumn("", rend, 0, DividerWidth,
-        		wxAlignment(wxALIGN_LEFT | wxALIGN_TOP), wxDATAVIEW_COL_RESIZABLE);
-        dataView->AppendColumn(column0);
-        dataView->SetExpanderColumn(column0);
+		wxDataViewColumn* column0 = new wxDataViewColumn("", rend, 0, DividerWidth,
+				wxAlignment(wxALIGN_LEFT | wxALIGN_TOP), wxDATAVIEW_COL_RESIZABLE);
+		dataView->AppendColumn(column0);
+		dataView->SetExpanderColumn(column0);
 
-        rend = new PrefItemRenderer(wxDATAVIEW_CELL_EDITABLE);
-        wxDataViewColumn* column1 = new wxDataViewColumn("", rend, 1,
-        		wxDVC_DEFAULT_MINWIDTH, wxAlignment(wxALIGN_LEFT | wxALIGN_TOP), 0);
-        dataView->AppendColumn(column1);
+		rend = new PrefItemRenderer(wxDATAVIEW_CELL_EDITABLE);
+		wxDataViewColumn* column1 = new wxDataViewColumn("", rend, 1,
+				wxDVC_DEFAULT_MINWIDTH, wxAlignment(wxALIGN_LEFT | wxALIGN_TOP), 0);
+		dataView->AppendColumn(column1);
 
-        PrefModel* prefModel = new PrefModel(title);
-        dataView->AssociateModel(prefModel);
+		PrefModel* prefModel = new PrefModel(title);
+		dataView->AssociateModel(prefModel);
 
-        //column0->SetSortOrder(true);
-        prefModel->Resort();
+		//column0->SetSortOrder(true);
+		prefModel->Resort();
 
-        dataView->Bind(wxEVT_DATAVIEW_ITEM_ACTIVATED, &wxFramePreferences::OnActivated, this, wxID_ANY);
+		dataView->Bind(wxEVT_DATAVIEW_ITEM_ACTIVATED, &wxFramePreferences::OnActivated, this, wxID_ANY);
 
-        wxFont Font = GetFont();
-        float FontSize = 9.0;
-        GConfig->GetFloat(TEXT("GameLog"), TEXT("FontSize"), FontSize, TEXT("UnrealEd.ini"));
-        Font.SetFractionalPointSize(FontSize);
-        SetFont(Font);
+		wxFont Font = GetFont();
+		float FontSize = 9.0;
+		GConfig->GetFloat(TEXT("GameLog"), TEXT("FontSize"), FontSize, TEXT("UnrealEd.ini"));
+		Font.SetFractionalPointSize(FontSize);
+		SetFont(Font);
 
 		Connect(GetId(), wxEVT_ACTIVATE , wxActivateEventHandler(wxFramePreferences::OnActivate));
 		Bind(wxEVT_SIZE, &wxFramePreferences::OnSize, this, wxID_ANY);
@@ -1226,7 +1226,7 @@ private:
 		unguard;
 	}
 public:
-    UEngine* Engine;
+	UEngine* Engine;
 	LogWindow* LogWin;
 	FExecHook()
 	: wxPreferences( NULL )
