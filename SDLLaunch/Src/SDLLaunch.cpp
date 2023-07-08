@@ -115,6 +115,13 @@ FFileManagerLinux FileManager;
     #include "UTGLROpenGL.h"
 #endif
 
+#if APPLE
+# include "FruCoReDrv.h"
+#endif
+
+#include "EditorPrivate.h"
+#include "UnEditorNative.h"
+
 //#include "NullRender.h"
 
 #endif
@@ -1100,37 +1107,42 @@ int wxUnrealTournament::OnRun()
 	}
 
 	// Core lookups.
-	GNativeLookupFuncs[0] = &FindCoreUObjectNative;
-	GNativeLookupFuncs[1] = &FindCoreUCommandletNative;
+	INT k = 0;
+	GNativeLookupFuncs[k++] = &FindCoreUObjectNative;
+	GNativeLookupFuncs[k++] = &FindCoreUCommandletNative;
+	GNativeLookupFuncs[k++] = &FindCoreURegistryNative;
 
 	// Engine lookups.
-	GNativeLookupFuncs[2] = &FindEngineAActorNative;
-	GNativeLookupFuncs[3] = &FindEngineAPawnNative;
-	GNativeLookupFuncs[4] = &FindEngineAPlayerPawnNative;
-	GNativeLookupFuncs[5] = &FindEngineADecalNative;
-	GNativeLookupFuncs[6] = &FindEngineAStatLogNative;
-	GNativeLookupFuncs[7] = &FindEngineAStatLogFileNative;
-	GNativeLookupFuncs[8] = &FindEngineAZoneInfoNative;
-	GNativeLookupFuncs[9] = &FindEngineAWarpZoneInfoNative;
-	GNativeLookupFuncs[10] = &FindEngineALevelInfoNative;
-	GNativeLookupFuncs[11] = &FindEngineAGameInfoNative;
-	GNativeLookupFuncs[12] = &FindEngineANavigationPointNative;
-	GNativeLookupFuncs[13] = &FindEngineUCanvasNative;
-	GNativeLookupFuncs[14] = &FindEngineUConsoleNative;
-	GNativeLookupFuncs[15] = &FindEngineUScriptedTextureNative;
+	GNativeLookupFuncs[k++] = &FindEngineAActorNative;
+	GNativeLookupFuncs[k++] = &FindEngineAPawnNative;
+	GNativeLookupFuncs[k++] = &FindEngineAPlayerPawnNative;
+	GNativeLookupFuncs[k++] = &FindEngineADecalNative;
+	GNativeLookupFuncs[k++] = &FindEngineAStatLogNative;
+	GNativeLookupFuncs[k++] = &FindEngineAStatLogFileNative;
+	GNativeLookupFuncs[k++] = &FindEngineAZoneInfoNative;
+	GNativeLookupFuncs[k++] = &FindEngineAWarpZoneInfoNative;
+	GNativeLookupFuncs[k++] = &FindEngineALevelInfoNative;
+	GNativeLookupFuncs[k++] = &FindEngineAGameInfoNative;
+	GNativeLookupFuncs[k++] = &FindEngineANavigationPointNative;
+	GNativeLookupFuncs[k++] = &FindEngineUCanvasNative;
+	GNativeLookupFuncs[k++] = &FindEngineUConsoleNative;
+	GNativeLookupFuncs[k++] = &FindEngineUScriptedTextureNative;
 
-	GNativeLookupFuncs[16] = &FindIpDrvAInternetLinkNative;
-	GNativeLookupFuncs[17] = &FindIpDrvAUdpLinkNative;
-	GNativeLookupFuncs[18] = &FindIpDrvATcpLinkNative;
+	GNativeLookupFuncs[k++] = &FindIpDrvAInternetLinkNative;
+	GNativeLookupFuncs[k++] = &FindIpDrvAUdpLinkNative;
+	GNativeLookupFuncs[k++] = &FindIpDrvATcpLinkNative;
 
 	// UWeb lookups.
-	GNativeLookupFuncs[19] = &FindUWebUWebResponseNative;
-	GNativeLookupFuncs[20] = &FindUWebUWebRequestNative;
+	GNativeLookupFuncs[k++] = &FindUWebUWebResponseNative;
+	GNativeLookupFuncs[k++] = &FindUWebUWebRequestNative;
 
-	// udemo lookups.
-	GNativeLookupFuncs[21] = &FindudemoUUZHandlerNative;
-	GNativeLookupFuncs[22] = &FindudemoUudnativeNative;
-	GNativeLookupFuncs[23] = &FindudemoUDemoInterfaceNative;
+	// UDemo lookups.
+	GNativeLookupFuncs[k++] = &FindudemoUUZHandlerNative;
+	GNativeLookupFuncs[k++] = &FindudemoUudnativeNative;
+	GNativeLookupFuncs[k++] = &FindudemoUDemoInterfaceNative;
+
+	// Editor lookups.
+	GNativeLookupFuncs[k++] = &FindEditorUBrushBuilderNative;
 #endif
 
 	UEngine* Engine = NULL;
@@ -1163,9 +1175,10 @@ int wxUnrealTournament::OnRun()
 		// Init static classes.
 #if __STATIC_LINK
 		AUTO_INITIALIZE_REGISTRANTS_ENGINE;
+		AUTO_INITIALIZE_REGISTRANTS_EDITOR;
 		AUTO_INITIALIZE_REGISTRANTS_SDLDRV;
 		AUTO_INITIALIZE_REGISTRANTS_ALAUDIO;
-		AUTO_INITIALIZE_REGISTRANTS_CLUSTER;
+		UClusterAudioSubsystem::StaticClass();
 #if defined(__EMSCRIPTEN__)
 #if FORCE_XOPENGLDRV
 		AUTO_INITIALIZE_REGISTRANTS_XOPENGLDRV;
@@ -1334,8 +1347,8 @@ void wxUnrealTournament::Tick(wxIdleEvent& Event)
 		const FLOAT MaxTickRate = Args->Engine->GetMaxTickRate();
 		if( MaxTickRate>0.0 )
 		{
-			FLOAT Delta = (1.0/MaxTickRate) - (appSecondsNew()-Args->OldTime);
-			appSleep( Max(0.f,Delta) );
+			DOUBLE Delta = (1.0/MaxTickRate) - (appSecondsNew()-Args->OldTime);
+			appSleepLong( Max(0.0,Delta) );
 		}
 		unguard;
 

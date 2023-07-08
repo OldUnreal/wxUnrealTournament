@@ -54,9 +54,9 @@ public:
 			{
 				ErrorHist += LocalizeError("History",TEXT("Core"));
 				ErrorHist += TEXT(": ");
-#ifndef _MSC_VER
+#if !defined(_MSC_VER)
 				FString GuardBackTrace;
-				UnGuardBlock::GetBackTrace(GuardBackTrace);
+				UnGuardBlockTLS::GetBackTrace(GuardBackTrace);
 				ErrorHist += GuardBackTrace;
 #endif
 				appStrncpy(GErrorHist, *ErrorHist, ARRAY_COUNT(GErrorHist) - 1); 
