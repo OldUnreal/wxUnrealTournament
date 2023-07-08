@@ -1171,7 +1171,7 @@ private:
 			}
 
 			if (GCurrentViewport && GCurrentViewport->IsFullscreen())
-                GCurrentViewport->Exec(TEXT("EndFullscreen"), *GLog);
+				GCurrentViewport->Exec(TEXT("EndFullscreen"), *GLog);
 
 			wxPreferences->Iconize(false);
 			wxPreferences->SetFocus();
@@ -1182,7 +1182,19 @@ private:
 		}
 		else if (ParseCommand(&Cmd, TEXT("ShowLog")))
 		{
-			if (LogWin && LogWin->LogWin) LogWin->LogWin->Show(true);
+			if (LogWin && LogWin->LogWin)
+			{
+				if (GCurrentViewport && GCurrentViewport->IsFullscreen())
+					GCurrentViewport->Exec(TEXT("EndFullscreen"), *GLog);
+				wxFrame* Frame = LogWin->LogWin->GetFrame();
+				if (Frame)
+				{
+					Frame->Iconize(false);
+					Frame->SetFocus();
+					Frame->Raise();
+				}
+				LogWin->LogWin->Show(true);
+			}
 			return 1;
 		}
 		else if (ParseCommand(&Cmd, TEXT("HideLog")))
