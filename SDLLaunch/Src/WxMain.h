@@ -218,7 +218,7 @@ public:
 	WConfigPageFirstTime(WConfigWizard* InOwner, wxWizardPage* InPrev)
 		: WConfigPage(InOwner, InPrev)
 	{
-		FirstTimePrompt = new WTextLabel(this, IDC_Prompt, Localize(TEXT("IDDIALOG_ConfigPageFirstTime"), TEXT("IDC_PromptSDL"), TEXT("Startup")));
+		FirstTimePrompt = new WTextLabel(this, IDC_Prompt, Localize(TEXT("IDDIALOG_ConfigPageFirstTime"), TEXT("IDC_Prompt"), TEXT("Startup")));
 		FirstTimePrompt->Wrap(640);
 		// ugly hax to center the text vertically
 		VertSizer->AddSpacer((((wxWizard*)Owner)->GetSize() - FirstTimePrompt->GetSize()).GetHeight()/2);
