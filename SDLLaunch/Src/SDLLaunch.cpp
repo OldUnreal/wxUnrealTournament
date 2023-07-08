@@ -748,7 +748,7 @@ int main_(int argc, char* argv[])
 			else if( !AlreadyRunning && GFileManager->FileSize(TEXT("Running.ini"))>=0 )
 			{
 //				Page = new WConfigPageSafeMode(&D, nullptr);
-//				D.Title=LocalizeGeneral(TEXT("RecoveryMode"),TEXT("Startup"));
+//				D.Title = LocalizeGeneral(TEXT("RecoveryMode"),TEXT("Startup"));
 			}
 			if( Page )
 			{
