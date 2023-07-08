@@ -140,6 +140,9 @@ FFileManagerLinux FileManager;
 #include <semaphore.h>
 
 #ifndef WX_FIRST
+#undef DECLARE_ABSTRACT_CLASS
+#undef DECLARE_CLASS
+#undef IMPLEMENT_CLASS
 #include "wx.h"
 #endif // WX_FIRST
 #include "WindowRes.h"
