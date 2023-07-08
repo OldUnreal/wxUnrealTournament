@@ -109,16 +109,16 @@ FFileManagerLinux FileManager;
 #include "udemoNative.h"
 
 #if defined(__EMSCRIPTEN__)
-    #if FORCE_XOPENGLDRV
-        #include "XOpenGLDrv.h"
-    #else
-        #include "OpenGLDrv.h"
-        #include "UTGLROpenGL.h"
-    #endif
+	#if FORCE_XOPENGLDRV
+		#include "XOpenGLDrv.h"
+	#else
+		#include "OpenGLDrv.h"
+		#include "UTGLROpenGL.h"
+	#endif
 #else
-    #include "XOpenGLDrv.h"
-    #include "OpenGLDrv.h"
-    #include "UTGLROpenGL.h"
+	#include "XOpenGLDrv.h"
+	#include "OpenGLDrv.h"
+	#include "UTGLROpenGL.h"
 #endif
 
 #if APPLE
@@ -186,14 +186,14 @@ static void InitSplash(const TCHAR *fname)
 	// Set viewport window's name to show resolution.
 	appSnprintf( WindowName, ARRAY_COUNT(WindowName), TEXT("Unreal Tournament is starting...") );
 	SplashWindow = SDL_CreateWindow(appToAnsi(WindowName),
-                          SDL_WINDOWPOS_CENTERED,
-                          SDL_WINDOWPOS_CENTERED,
-                          SplashImage->w, SplashImage->h,
-                          SDL_WINDOW_BORDERLESS);
+		SDL_WINDOWPOS_CENTERED,
+		SDL_WINDOWPOS_CENTERED,
+		SplashImage->w, SplashImage->h,
+		SDL_WINDOW_BORDERLESS);
 
 	if (SplashWindow == NULL)
 	{
-        SDL_ShowSimpleMessageBox(0, "SplashWindow init error", SDL_GetError(), SplashWindow);
+		SDL_ShowSimpleMessageBox(0, "SplashWindow init error", SDL_GetError(), SplashWindow);
 		return;
 	}
 
@@ -210,11 +210,11 @@ static void InitSplash(const TCHAR *fname)
 		SDL_ShowSimpleMessageBox(0, "SplashTexture init error", SDL_GetError(), SplashWindow);
 		return;
 	}
-    SDL_RenderClear(SplashRenderer);
-    SDL_RenderCopy(SplashRenderer, SplashTexture, NULL, NULL);
-    SDL_RenderPresent(SplashRenderer);
+	SDL_RenderClear(SplashRenderer);
+	SDL_RenderCopy(SplashRenderer, SplashTexture, NULL, NULL);
+	SDL_RenderPresent(SplashRenderer);
 
-    unguard;
+	unguard;
 }
 
 static void ExitSplash()
@@ -227,13 +227,13 @@ static void ExitSplash()
 //	if (SplashTexture)
 //		SDL_DestroyTexture(SplashTexture);
 	if (SplashImage)
-        SDL_FreeSurface(SplashImage);
+		SDL_FreeSurface(SplashImage);
 //	if (SplashRenderer)
-//        SDL_DestroyRenderer(SplashRenderer);
+//		SDL_DestroyRenderer(SplashRenderer);
 	if (SplashWindow)
 		SDL_DestroyWindow(SplashWindow);
 
-    unguard;
+	unguard;
 }
 
 static inline void FixIni()
@@ -247,7 +247,7 @@ static inline void FixIni()
 	
 	const TCHAR* LegacyOrWindowsVideoRenderers[] =
 	{
-        TEXT("D3DDrv.D3DRenderDevice"),
+		TEXT("D3DDrv.D3DRenderDevice"),
 		TEXT("D3D8Drv.D3D8RenderDevice"),
 		TEXT("D3D9Drv.D3D9RenderDevice"),
 		TEXT("D3D10Drv.D3D10RenderDevice"),
@@ -264,10 +264,10 @@ static inline void FixIni()
 		TEXT("Galaxy.GalaxyAudioSubsystem"),
 	};
 	
-    // A default config? Force it from WinDrv to SDLDrv... --ryan.
-    //  Also clean up legacy Loki interfaces...
+	// A default config? Force it from WinDrv to SDLDrv... --ryan.
+	//  Also clean up legacy Loki interfaces...
 	if( !ParseParam(appCmdLine(),TEXT("NoForceSDLDrv")) )
-    {
+	{
 #ifdef __EMSCRIPTEN__
 # if FORCE_XOPENGLDRV
 		GConfig->SetString(TEXT("Engine.Engine"), TEXT("GameRenderDevice"), TEXT("XOpenGLDrv.XOpenGLRenderDevice"));
@@ -280,11 +280,11 @@ static inline void FixIni()
 # endif
 #else
 
-	    if( appStricmp(GConfig->GetStr(TEXT("Engine.Engine"),TEXT("ViewportManager"),TEXT("System")),TEXT("WinDrv.WindowsClient"))==0 )
-        {
-            debugf(TEXT("Your ini had WinDrv...Forcing use of SDLDrv instead."));
+		if( appStricmp(GConfig->GetStr(TEXT("Engine.Engine"),TEXT("ViewportManager"),TEXT("System")),TEXT("WinDrv.WindowsClient"))==0 )
+		{
+			debugf(TEXT("Your ini had WinDrv...Forcing use of SDLDrv instead."));
 			GConfig->SetString(TEXT("Engine.Engine"), TEXT("ViewportManager"), TEXT("SDLDrv.SDLClient"));
-        }
+		}
 
 		for (INT j = 0; j < ARRAY_COUNT(IniVideoRendererKeys); ++j)
 		{
@@ -301,10 +301,10 @@ static inline void FixIni()
 			}
 		}
 #endif
-    }
+	}
 
 	if( !ParseParam(appCmdLine(),TEXT("NoForceALAudio")) )
-    {
+	{
 		for (INT i = 0; i < ARRAY_COUNT(LegacyOrWindowsAudioRenderers); ++i)
 		{
 			if (appStricmp(GConfig->GetStr(TEXT("Engine.Engine"), TEXT("AudioDevice"), TEXT("System")), LegacyOrWindowsAudioRenderers[i]) == 0)
@@ -315,7 +315,7 @@ static inline void FixIni()
 				break;
 			}
 		}
-    }
+	}
 }
 
 
@@ -348,7 +348,7 @@ static UEngine* InitEngine()
 		FirstRun = ENGINE_VERSION;
 	GConfig->SetInt( TEXT("FirstRun"), TEXT("FirstRun"), FirstRun );
 
-    FixIni();  // check for legacy and Windows-specific INI entries...
+	FixIni();  // check for legacy and Windows-specific INI entries...
 
 	// Create the global engine object.
 	UClass* EngineClass;
@@ -414,7 +414,7 @@ int CleanUpOnExit(int ErrorLevel)
 	#ifdef __EMSCRIPTEN__
 	emscripten_cancel_main_loop();  // this should "kill" the app.
 	emscripten_force_exit(ErrorLevel);  // this should "kill" the app.
-    #endif
+	#endif
 
 	_exit(ErrorLevel);
 }
@@ -422,21 +422,21 @@ int CleanUpOnExit(int ErrorLevel)
 // just in case.  :)  --ryan.
 static void sdl_atexit_handler(void)
 {
-    static bool already_called = false;
+	static bool already_called = false;
 
-    if (!already_called)
-    {
-        already_called = true;
-        SDL_Quit();
-    }
+	if (!already_called)
+	{
+		already_called = true;
+		SDL_Quit();
+	}
 }
 
 struct MainLoopArgs
 {
-    DOUBLE OldTime;
-    DOUBLE SecondStartTime;
-    INT TickCount;
-    UEngine *Engine;
+	DOUBLE OldTime;
+	DOUBLE SecondStartTime;
+	INT TickCount;
+	UEngine *Engine;
 };
 
 static bool MainLoopIteration(MainLoopArgs *args)
@@ -449,7 +449,7 @@ static bool MainLoopIteration(MainLoopArgs *args)
 		return false;
 	}
 
-    try 
+	try 
 	{
 		DOUBLE &OldTime = args->OldTime;
 		DOUBLE &SecondStartTime = args->SecondStartTime;
@@ -478,7 +478,7 @@ static bool MainLoopIteration(MainLoopArgs *args)
 		raise(SIGUSR1);
 	}
 
-    return true;
+	return true;
 	unguard;
 }
 
@@ -504,11 +504,11 @@ static void MainLoop( UEngine* Engine )
 #ifndef WX
 	// Loop while running.
 	GIsRunning = 1;
-    MainLoopArgs *args = new MainLoopArgs;
-    args->OldTime = appSecondsNew();
-    args->SecondStartTime = args->OldTime;
-    args->TickCount = 0;
-    args->Engine = Engine;
+	MainLoopArgs *args = new MainLoopArgs;
+	args->OldTime = appSecondsNew();
+	args->SecondStartTime = args->OldTime;
+	args->TickCount = 0;
+	args->Engine = Engine;
 
 	#ifdef __EMSCRIPTEN__
 	emscripten_set_main_loop_arg(EmscriptenMainLoopIteration, args, 0, 1);
@@ -895,6 +895,6 @@ int main( int argc, char* argv[] )
 	main_(argc, argv);
 #endif // WX
 
-    return(0);
+	return 0;
 }
 
