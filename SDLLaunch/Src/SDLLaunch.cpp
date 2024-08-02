@@ -51,8 +51,8 @@ TCHAR GPackageInternal[64]=TEXT("SDLLaunch");
 extern "C" {const TCHAR* GPackage=GPackageInternal;}
 
 // Memory allocator.
-#include "FMallocAnsi.h"
-FMallocAnsi Malloc;
+#include "FMallocImpl.h"
+FMallocImpl Malloc;
 
 // Log file.
 #include "FOutputDeviceFile.h"
